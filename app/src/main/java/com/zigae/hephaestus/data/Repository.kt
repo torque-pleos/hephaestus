@@ -50,7 +50,10 @@ class Repository(context: Context) {
 
     fun deleteRecord(id: String) = update { d -> d.copy(records = d.records.filterNot { it.id == id }) }
 
-    fun addPrompt(p: VisitPrompt) = update { it.copy(prompts = it.prompts + p, lastPrompt = p) }
+    /** 같은 곳(300m 안)의 답하지 않은 질문은 새 질문으로 바꾼다. */
+    fun addPrompt(p: VisitPrompt) = update { d ->
+        d.copy(prompts = d.prompts.filterNot { it.at.distanceTo(p.at) <= 300.0 } + p, lastPrompt = p)
+    }
 
     fun dismissPrompt(id: String) = update { d -> d.copy(prompts = d.prompts.filterNot { it.id == id }) }
 

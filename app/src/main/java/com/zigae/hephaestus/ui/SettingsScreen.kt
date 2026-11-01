@@ -13,7 +13,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -51,10 +50,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                 SectionTitle("차종", data.detectedMode?.let { "차량 정보로 추정: ${it.label}" } ?: "차량 정보로 추정하지 못함")
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Powertrain.entries.forEach { p ->
-                        FilterChip(
-                            selected = p == mode, onClick = { graph.repo.setMode(p) },
-                            label = { Text(p.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(12.dp)) },
-                        )
+                        SelectChip(p.label, p == mode) { graph.repo.setMode(p) }
                     }
                 }
             }
@@ -64,7 +60,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                 SectionTitle("내 정비소", "등록한 곳에 정차하면 바로 정비소로 알아봅니다. 기록을 남긴 정비소는 자동 등록됩니다.")
                 data.places.filter { it.kind == Place.Kind.MY_SHOP }.forEach { PlaceRow(it) { graph.repo.deletePlace(it.id) } }
                 Spacer(Modifier.height(8.dp))
-                OutlinedButton(onClick = { naming = true }, enabled = navi.location != null, modifier = Modifier.height(60.dp)) {
+                OutlinedButton(shape = ButtonShape, onClick = { naming = true }, enabled = navi.location != null, modifier = Modifier.height(60.dp)) {
                     Text(if (navi.location != null) "현재 위치를 내 정비소로 등록" else "현재 위치 확인 중…")
                 }
                 val ignored = data.places.filter { it.kind == Place.Kind.IGNORED }
@@ -79,17 +75,11 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                 SectionTitle("교체 주기", "항목을 눌러 바꿉니다")
                 MaintenanceItem.forMode(mode).forEach { item ->
                     val iv = data.interval(item, mode)!!
-                    Row(
-                        Modifier.fillMaxWidth().clickable { editing = item }.padding(vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(item.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        Text(
-                            Format.interval(iv) + if (item in data.intervalOverrides) " (변경)" else "",
-                            color = if (item in data.intervalOverrides) Palette.accent else Palette.sub,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                    }
+                    ListRow(
+                        null, item.label,
+                        Format.interval(iv) + if (item in data.intervalOverrides) " (변경)" else "",
+                        valueColor = if (item in data.intervalOverrides) Palette.blue else Palette.sub,
+                    ) { editing = item }
                 }
             }
         }
@@ -98,11 +88,9 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                 SectionTitle("감지", "정비소에 이 시간 이상 머물러야 묻습니다 (잠깐 들른 경우 제외)")
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     listOf(0, 5, 20, 30).forEach { m ->
-                        FilterChip(
-                            selected = data.minDwellMinutes == m,
-                            onClick = { graph.repo.update { it.copy(minDwellMinutes = m) } },
-                            label = { Text(if (m == 0) "바로" else "${m}분", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(12.dp)) },
-                        )
+                        SelectChip(if (m == 0) "바로" else "${m}분", data.minDwellMinutes == m) {
+                            graph.repo.update { it.copy(minDwellMinutes = m) }
+                        }
                     }
                 }
             }
@@ -114,7 +102,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                 Spacer(Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     listOf(100, 1_000, 5_000, 50_000).forEach { add ->
-                        OutlinedButton(onClick = {
+                        OutlinedButton(shape = ButtonShape, onClick = {
                             graph.repo.update { it.copy(demoOdometerOffsetKm = it.demoOdometerOffsetKm + add) }
                             graph.detector.checkRemindersIfParked()
                         }, modifier = Modifier.height(56.dp)) { Text("+${Format.km(add)}") }
@@ -123,13 +111,13 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Button(onClick = {
+                    Button(shape = ButtonShape, onClick = {
                         val at = navi.location
                         message = if (at != null && graph.navi.requestDestination(DEMO_SHOP, at, navi.address)) {
                             "내비 목적지를 \"$DEMO_SHOP\"(현재 위치)로 설정했습니다. 기어 P → 출차하면 질문이 나옵니다."
                         } else "목적지 설정 실패 (내비 연결·위치 확인)"
                     }, modifier = Modifier.height(60.dp)) { Text("현재 위치 카센터를 목적지로") }
-                    OutlinedButton(onClick = {
+                    OutlinedButton(shape = ButtonShape, onClick = {
                         graph.detector.simulateVisit(DEMO_SHOP)
                         message = "방문 질문을 만들었습니다. 홈과 알림 센터를 확인하세요."
                     }, modifier = Modifier.height(60.dp)) { Text("방문 질문 바로 만들기") }

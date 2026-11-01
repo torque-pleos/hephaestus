@@ -219,17 +219,19 @@
 
 ## 10. 디자인
 
-Figma Community 레퍼런스의 차량용 다크 UI 언어를 차량 화면(2560×1440, 160dpi)에 맞게 적용했다. 커버 이미지만 공개되어 세부 컴포넌트가 아니라 시각 언어를 참고했다.
+Pleos Connect 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 **myHyundai 앱 디자인 언어**를 따랐다(앱스토어 공식 스크린샷 참고). 처음 시도한 형광 라임 다크 테마(계기판 콘셉트 아트 참고)는 Pleos 가이드의 "과도한 색상 지양·기본 UI와 일관성"에 어긋나 폐기했다.
 
-| 레퍼런스 | 가져온 요소 |
+| myHyundai 요소 | 적용 |
 | --- | --- |
-| [Car Dashboard UI Concept](https://www.figma.com/community/file/1119175706708054121/car-dashboard-ui-concept) | 거의 검정 배경 + 형광 라임 단일 강조색, 얇고 큰 숫자 + 작은 단위, 칸 나뉜 게이지(교체 시기 막대), P R N D 표시 |
-| [Android Auto Design System](https://www.figma.com/community/file/1441273997313085146/android-auto-design-system) · [Car App Templates](https://www.figma.com/community/file/1506418622696735515/car-app-templates-design-kit) | 왼쪽 원형 아이콘 레일, 제목 + 색 보조정보 목록 행, 큰 라운드 패널 |
-| [Uber Maintenance Tracking](https://www.figma.com/community/file/1408413992900932172/uber-maintenance-tracking) | 검정 + 라임 강조의 정비 추적 톤 |
+| 연회색 배경 + 흰 카드, 현대 네이비 단일 주색 | 배경 `#F2F3F5`, 카드 흰색, 주색 네이비 `#002C5F`, 강조 `#1F6FEB` |
+| 회색 안내 배너 (ⓘ 3일 뒤 정비 예약이 있어요) | 홈 상태 배너 "시흥 오토 카센터에 정차 중이에요" |
+| 네이비 머리 블록 카드 (월렛) | 정비 기록 질문 카드 |
+| 항목 + 값 + 꺾쇠 목록 행 | 소모품 관리 목록, 설정 교체 주기 |
+| 네이비 채움 사각 버튼 | 기록하기 / 선택 칩 |
 
-- 색: 배경 `#07090B`, 패널 `#14181C`, 강조 라임 `#C6F432`, 상태 여유 청록 `#3DD9C1` / 임박 `#FFB547` / 지남 `#FF5A5F`
-- 질문 카드는 라임 테두리 + 빛, 선택한 항목은 라임으로 채운 칩
-- 화면: [차종 선택](docs/screenshots/00-mode-setup.png) · [홈](docs/screenshots/01-home-visit-prompt.png) · [기록](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
+- 상태색은 꼭 필요한 곳만: 교체 필요 빨강, 곧 교체 주황 배지
+- 화면: [홈](docs/screenshots/01-home-visit-prompt.png) · [정비 이력](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
+- 남은 일: HMG 디자인 시스템(Storybook, 사내망) 토큰 확인 후 색·글꼴·간격 값 교체
 
 ## 참고 문서
 
