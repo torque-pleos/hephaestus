@@ -26,6 +26,8 @@ data class AppData(
     val minDwellMinutes: Int = 20,
     /** 데모용 주행거리 보정(km). 에뮬레이터 주행거리는 0에서 움직이지 않는다. */
     val demoOdometerOffsetKm: Int = 0,
+    /** 마지막으로 만든 질문(같은 곳 반복 질문 방지용). */
+    val lastPrompt: VisitPrompt? = null,
 ) {
     fun interval(item: MaintenanceItem, mode: Powertrain): Interval? =
         intervalOverrides[item] ?: item.defaultInterval(mode)
@@ -51,15 +53,22 @@ object AppDataCodec {
             }
         })
         put("prompts", JSONArray().apply {
-            d.prompts.forEach {
-                put(JSONObject().put("id", it.id).put("shop", it.shopName).put("lat", it.at.lat).put("lon", it.at.lon)
-                    .put("source", it.source.name).put("arrivedAt", it.arrivedAt).put("createdAt", it.createdAt).put("km", it.odometerKm))
-            }
+            d.prompts.forEach { put(promptJson(it)) }
         })
         put("notified", JSONObject().apply { d.notified.forEach { (k, v) -> put(k.name, v.name) } })
         put("minDwellMinutes", d.minDwellMinutes)
         put("demoOdometerOffsetKm", d.demoOdometerOffsetKm)
+        d.lastPrompt?.let { put("lastPrompt", promptJson(it)) }
     }.toString()
+
+    private fun promptJson(it: VisitPrompt) = JSONObject().put("id", it.id).put("shop", it.shopName).put("lat", it.at.lat).put("lon", it.at.lon)
+        .put("source", it.source.name).put("arrivedAt", it.arrivedAt).put("createdAt", it.createdAt).put("km", it.odometerKm)
+
+    private fun promptOf(it: JSONObject) = VisitPrompt(
+        it.getString("id"), it.getString("shop"), LatLon(it.getDouble("lat"), it.getDouble("lon")),
+        it.getString("source").toEnum<ShopSource>() ?: ShopSource.DEMO,
+        it.getLong("arrivedAt"), it.getLong("createdAt"), it.getInt("km"),
+    )
 
     fun decode(text: String): AppData {
         val o = JSONObject(text)
@@ -81,13 +90,7 @@ object AppDataCodec {
                 val kind = it.getString("kind").toEnum<Place.Kind>() ?: return@mapNotNull null
                 Place(it.getString("id"), it.getString("name"), LatLon(it.getDouble("lat"), it.getDouble("lon")), kind)
             },
-            prompts = o.optJSONArray("prompts").objects().map {
-                VisitPrompt(
-                    it.getString("id"), it.getString("shop"), LatLon(it.getDouble("lat"), it.getDouble("lon")),
-                    it.getString("source").toEnum<ShopSource>() ?: ShopSource.DEMO,
-                    it.getLong("arrivedAt"), it.getLong("createdAt"), it.getInt("km"),
-                )
-            },
+            prompts = o.optJSONArray("prompts").objects().map(::promptOf),
             notified = o.optJSONObject("notified")?.let { n ->
                 n.keys().asSequence().mapNotNull { key ->
                     val item = MaintenanceItem.fromKey(key) ?: return@mapNotNull null
@@ -97,6 +100,7 @@ object AppDataCodec {
             } ?: emptyMap(),
             minDwellMinutes = o.optInt("minDwellMinutes", 20),
             demoOdometerOffsetKm = o.optInt("demoOdometerOffsetKm", 0),
+            lastPrompt = o.optJSONObject("lastPrompt")?.let(::promptOf),
         )
     }
 

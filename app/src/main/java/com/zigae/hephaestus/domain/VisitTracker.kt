@@ -103,3 +103,14 @@ class VisitTracker(
         const val DEFAULT_MIN_DWELL_MS = 20L * 60 * 1000
     }
 }
+
+/** 같은 정비소에서 정차·출차를 반복할 때(정비 중 이동, 재주차) 같은 질문을 다시 하지 않는다. */
+object PromptCooldown {
+    const val WINDOW_MS = 6L * 60 * 60 * 1000
+    const val RADIUS_M = 300.0
+
+    fun blocks(next: VisitPrompt, last: VisitPrompt?): Boolean {
+        if (last == null || next.source == ShopSource.DEMO) return false
+        return next.createdAt - last.createdAt in 0 until WINDOW_MS && next.at.distanceTo(last.at) <= RADIUS_M
+    }
+}

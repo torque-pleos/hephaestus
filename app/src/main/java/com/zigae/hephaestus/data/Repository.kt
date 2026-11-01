@@ -50,7 +50,7 @@ class Repository(context: Context) {
 
     fun deleteRecord(id: String) = update { d -> d.copy(records = d.records.filterNot { it.id == id }) }
 
-    fun addPrompt(p: VisitPrompt) = update { it.copy(prompts = it.prompts + p) }
+    fun addPrompt(p: VisitPrompt) = update { it.copy(prompts = it.prompts + p, lastPrompt = p) }
 
     fun dismissPrompt(id: String) = update { d -> d.copy(prompts = d.prompts.filterNot { it.id == id }) }
 

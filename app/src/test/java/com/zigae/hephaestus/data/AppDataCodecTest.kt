@@ -26,6 +26,7 @@ class AppDataCodecTest {
             notified = mapOf(MaintenanceItem.BRAKE_FLUID to DueLevel.SOON),
             minDwellMinutes = 0,
             demoOdometerOffsetKm = 52_000,
+            lastPrompt = VisitPrompt("v0", "단골 카센터", at, ShopSource.MY_SHOP, 0L, 1L, 50_000),
         )
         assertEquals(d, AppDataCodec.decode(AppDataCodec.encode(d)))
     }

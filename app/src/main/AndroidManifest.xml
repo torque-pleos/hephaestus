@@ -9,6 +9,8 @@
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
     <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
     <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+    <!-- 배터리 용량(INFO_EV_BATTERY_CAPACITY) → 차종 추정 -->
+    <uses-permission android:name="pleos.car.permission.CAR_INFO" />
     <!-- NaviHelper: 현재 위치·목적지 조회, 데모 목적지 설정 -->
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />

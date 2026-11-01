@@ -1,6 +1,5 @@
 package com.zigae.hephaestus.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +16,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -40,7 +40,7 @@ private enum class Tab(val label: String, val glyph: String) {
 fun HephApp(graph: AppGraph) {
     HephTheme {
         val data by graph.repo.data.collectAsStateWithLifecycle()
-        Box(Modifier.fillMaxSize().background(Palette.bg)) {
+        Surface(Modifier.fillMaxSize(), color = Palette.bg, contentColor = Palette.text) {
             val mode = data.mode
             if (mode == null) {
                 ModeSetup(detected = data.detectedMode, onPick = graph.repo::setMode)

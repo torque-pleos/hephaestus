@@ -24,12 +24,12 @@ object Palette {
 
 // 차량 화면은 멀리서 보므로 기본 글자를 크게 잡는다.
 private val type = Typography(
-    headlineMedium = TextStyle(fontSize = 34.sp, fontWeight = FontWeight.Bold),
-    titleLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
-    titleMedium = TextStyle(fontSize = 24.sp, fontWeight = FontWeight.SemiBold),
-    bodyLarge = TextStyle(fontSize = 22.sp),
-    bodyMedium = TextStyle(fontSize = 20.sp),
-    labelLarge = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold),
+    headlineMedium = TextStyle(fontSize = 46.sp, fontWeight = FontWeight.Bold),
+    titleLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold),
+    titleMedium = TextStyle(fontSize = 31.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontSize = 28.sp),
+    bodyMedium = TextStyle(fontSize = 25.sp),
+    labelLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.SemiBold),
 )
 
 @Composable

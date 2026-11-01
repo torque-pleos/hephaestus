@@ -5,6 +5,7 @@ import com.zigae.hephaestus.data.Repository
 import com.zigae.hephaestus.domain.DueLevel
 import com.zigae.hephaestus.domain.Gear
 import com.zigae.hephaestus.domain.LatLon
+import com.zigae.hephaestus.domain.PromptCooldown
 import com.zigae.hephaestus.domain.Reminders
 import com.zigae.hephaestus.domain.ShopHit
 import com.zigae.hephaestus.domain.ShopRules
@@ -118,6 +119,10 @@ class Detector(
     }
 
     private fun emit(p: VisitPrompt) {
+        if (PromptCooldown.blocks(p, repo.data.value.lastPrompt)) {
+            Log.i(TAG, "prompt skipped (asked here recently): ${p.shopName}")
+            return
+        }
         Log.i(TAG, "prompt: ${p.shopName} at ${p.odometerKm}km (${p.source})")
         repo.addPrompt(p)
         notifier.visit(p)

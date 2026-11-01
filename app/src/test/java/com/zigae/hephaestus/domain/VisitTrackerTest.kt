@@ -103,3 +103,18 @@ class VisitTrackerTest {
         return v!!
     }
 }
+
+class PromptCooldownTest {
+    private val at = LatLon(37.41272, 127.09468)
+    private fun p(t: Long, where: LatLon = at, src: ShopSource = ShopSource.DESTINATION) = VisitPrompt("x$t", "카센터", where, src, t, t, 1)
+    private val h = 60 * 60 * 1000L
+
+    @Test
+    fun samePlaceWithinWindowIsBlocked() {
+        assertEquals(true, PromptCooldown.blocks(p(2 * h), p(0)))
+        assertEquals(false, PromptCooldown.blocks(p(7 * h), p(0)))
+        assertEquals(false, PromptCooldown.blocks(p(1 * h, LatLon(37.42272, 127.09468)), p(0)))
+        assertEquals(false, PromptCooldown.blocks(p(1 * h), null))
+        assertEquals(false, PromptCooldown.blocks(p(1 * h, src = ShopSource.DEMO), p(0)))
+    }
+}
