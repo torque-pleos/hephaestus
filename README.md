@@ -185,14 +185,14 @@
 | --- | --- |
 | 첫 실행 차종 추정 | ✅ 배터리 용량 77.4kWh → "차량 정보로 추정: 전기차" 제안 (권한 `CAR_INFO` 필요, 없으면 "need Permission") |
 | 내비 목적지가 정비소 + 정차(P) | ✅ `정비소 감지: 시흥 오토 카센터 (내비 목적지)` |
-| 정비소에서 출차(P → D) | ✅ 질문 카드·알림 생성, 주행거리 자동 첨부 ([스크린샷](docs/screenshots/01-visit-prompt.png)) |
+| 정비소에서 출차(P → D) | ✅ 질문 카드·알림 생성, 주행거리 자동 첨부 ([스크린샷](docs/screenshots/01-home-visit-prompt.png)) |
 | 시동 OFF → ON (`cmd car_service suspend --simulate`) | ✅ 복귀 `SCREEN_ON` → 정차 상태에서 바로 질문 |
-| 항목 선택 → 기록 | ✅ 기록 저장, 교체 시기 목록 갱신, 그 정비소는 "내 정비소"로 자동 등록 ([스크린샷](docs/screenshots/02-recorded.png)) |
+| 항목 선택 → 기록 | ✅ 기록 저장, 교체 시기 목록 갱신, 그 정비소는 "내 정비소"로 자동 등록 ([스크린샷](docs/screenshots/02-history.png)) |
 | 내 정비소에 다시 정차 | ✅ 지도 검색 없이 즉시 `(내 정비소)`로 판별 |
 | 같은 곳에서 정차·출차 반복 | ✅ 6시간 안에는 다시 묻지 않음 (`prompt skipped`) |
 | "정비소 아님" | ✅ 그 장소는 판별 단계에서 제외 (`ignored=true`) |
 | 충전구 열림(전기차) 후 출차 | ✅ 충전 정차로 보고 묻지 않음 (Virtual Console `ev-battery?field=charge_port_open&value=true`) |
-| 교체 시기 지남 | ✅ 정차 중 알림 "타이어 위치 교환 시기가 지났어요 · 2,000km 지남" ([스크린샷](docs/screenshots/03-due-overdue.png)) |
+| 교체 시기 지남 | ✅ 정차 중 알림 "타이어 위치 교환 시기가 지났어요 · 2,000km 지남" ([스크린샷](docs/screenshots/01-home-visit-prompt.png)) |
 | 마지막 교체 직접 입력 | ✅ 항목 탭 → 주행거리 입력 → 기록 |
 | 내연기관 모드 전환 | ✅ 엔진오일·에어클리너·점화플러그·변속기 오일 항목으로 바뀜 |
 | 재부팅 | ✅ `BOOT_COMPLETED` → 서비스 자동 시작 → 내 정비소 판별 |
@@ -216,6 +216,20 @@
 | 실차 주행거리 값·단위 | 에뮬레이터는 항상 0.0 | 실차에서 `getCurrentDistanceDriven` 로그 |
 | 내연기관 차종 추정 | 에뮬레이터가 전기차(IONIQ 5)뿐 | 내연기관 실차에서 `getFuelPercent` 동작 확인 |
 | 실제 시동 OFF 시 프로세스 유지 | 에뮬레이터는 Suspend 시뮬레이션만 가능 | 실차 |
+
+## 10. 디자인
+
+Figma Community 레퍼런스의 차량용 다크 UI 언어를 차량 화면(2560×1440, 160dpi)에 맞게 적용했다. 커버 이미지만 공개되어 세부 컴포넌트가 아니라 시각 언어를 참고했다.
+
+| 레퍼런스 | 가져온 요소 |
+| --- | --- |
+| [Car Dashboard UI Concept](https://www.figma.com/community/file/1119175706708054121/car-dashboard-ui-concept) | 거의 검정 배경 + 형광 라임 단일 강조색, 얇고 큰 숫자 + 작은 단위, 칸 나뉜 게이지(교체 시기 막대), P R N D 표시 |
+| [Android Auto Design System](https://www.figma.com/community/file/1441273997313085146/android-auto-design-system) · [Car App Templates](https://www.figma.com/community/file/1506418622696735515/car-app-templates-design-kit) | 왼쪽 원형 아이콘 레일, 제목 + 색 보조정보 목록 행, 큰 라운드 패널 |
+| [Uber Maintenance Tracking](https://www.figma.com/community/file/1408413992900932172/uber-maintenance-tracking) | 검정 + 라임 강조의 정비 추적 톤 |
+
+- 색: 배경 `#07090B`, 패널 `#14181C`, 강조 라임 `#C6F432`, 상태 여유 청록 `#3DD9C1` / 임박 `#FFB547` / 지남 `#FF5A5F`
+- 질문 카드는 라임 테두리 + 빛, 선택한 항목은 라임으로 채운 칩
+- 화면: [차종 선택](docs/screenshots/00-mode-setup.png) · [홈](docs/screenshots/01-home-visit-prompt.png) · [기록](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
 
 ## 참고 문서
 

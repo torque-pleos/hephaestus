@@ -1,7 +1,10 @@
 package com.zigae.hephaestus.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -11,16 +14,22 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -31,9 +40,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zigae.hephaestus.AppGraph
@@ -47,6 +59,15 @@ import com.zigae.hephaestus.domain.Powertrain
 import com.zigae.hephaestus.domain.Reminders
 import com.zigae.hephaestus.domain.ShopSource
 import com.zigae.hephaestus.domain.VisitPrompt
+import java.text.NumberFormat
+import java.util.Locale
+
+fun levelColor(level: DueLevel): Color = when (level) {
+    DueLevel.OVERDUE -> Palette.overdue
+    DueLevel.SOON -> Palette.soon
+    DueLevel.OK -> Palette.ok
+    DueLevel.NO_RECORD -> Palette.none
+}
 
 @Composable
 fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
@@ -57,28 +78,39 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     val due = Reminders.all(mode, { data.interval(it, mode)!! }, data.records, odo, System.currentTimeMillis())
     var editing by remember { mutableStateOf<DueStatus?>(null) }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-        LazyColumn(Modifier.weight(0.45f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+        LazyColumn(Modifier.weight(0.46f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(20.dp)) {
             item {
-                HCard {
-                    Text(mode.label, color = Palette.sub, style = MaterialTheme.typography.bodyMedium)
-                    Text(Format.km(odo), style = MaterialTheme.typography.headlineMedium)
-                    Spacer(Modifier.height(12.dp))
-                    val gearText = when (vehicle.gear) {
-                        Gear.PARK -> status.parkedSince?.let { "정차 중 · ${Format.time(it)}부터" } ?: "정차 중"
-                        Gear.UNKNOWN -> "차량 연결 중…"
-                        else -> "주행 중"
+                Panel {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Caption("${mode.label} · 총 주행거리", modifier = Modifier.weight(1f))
+                        GearIndicator(vehicle.gear)
                     }
-                    Text(gearText, style = MaterialTheme.typography.bodyLarge)
-                    navi.address?.let { Text(it, color = Palette.sub, style = MaterialTheme.typography.bodyMedium) }
+                    BigNumber(NumberFormat.getIntegerInstance(Locale.KOREA).format(odo), "km")
+                    Spacer(Modifier.height(8.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Filled.LocationOn, null, tint = Palette.sub, modifier = Modifier.size(28.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            listOfNotNull(
+                                navi.address,
+                                when (vehicle.gear) {
+                                    Gear.PARK -> status.parkedSince?.let { "${Format.time(it)}부터 정차" } ?: "정차 중"
+                                    Gear.UNKNOWN -> "차량 연결 중…"
+                                    else -> "주행 중"
+                                },
+                            ).joinToString(" · "),
+                            style = MaterialTheme.typography.bodyLarge, color = Palette.sub,
+                        )
+                    }
                     if (vehicle.gear == Gear.PARK) {
-                        val shopText = when {
-                            status.resolving && status.shop == null -> "정비소인지 확인 중…"
-                            status.shop != null -> "정비소 감지: ${status.shop!!.name} (${status.shop!!.source.label})"
-                            status.ignoredPlace -> "정비소 아님으로 등록한 장소"
-                            else -> "정비소 아님"
+                        Spacer(Modifier.height(16.dp))
+                        when {
+                            status.shop != null -> Pill("정비소 감지 · ${status.shop!!.name}", icon = Icons.Filled.Build)
+                            status.resolving -> Pill("정비소인지 확인 중…", color = Palette.sub)
+                            status.ignoredPlace -> Pill("정비소 아님으로 등록한 곳", color = Palette.sub)
+                            else -> Pill("정비소 아님", color = Palette.sub)
                         }
-                        Text(shopText, color = if (status.shop != null) Palette.accent else Palette.sub, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
@@ -99,12 +131,21 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                     graph.notifier.cancelVisit(p.id)
                 })
             }
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    StatTile(due.count { it.level == DueLevel.OVERDUE }.toString(), "교체 지남", Palette.overdue, Modifier.weight(1f))
+                    StatTile(due.count { it.level == DueLevel.SOON }.toString(), "곧 교체", Palette.soon, Modifier.weight(1f))
+                    StatTile(data.records.size.toString(), "정비 기록", Palette.text, Modifier.weight(1f))
+                }
+            }
         }
-        Column(Modifier.weight(0.55f).fillMaxHeight()) {
-            Text("교체 시기", style = MaterialTheme.typography.titleLarge)
-            Text("주행거리 기준으로 가장 급한 순", color = Palette.sub, style = MaterialTheme.typography.bodyMedium)
-            Spacer(Modifier.height(12.dp))
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.weight(0.54f).fillMaxHeight()) {
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text("교체 시기", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                Caption("급한 순")
+            }
+            Spacer(Modifier.height(16.dp))
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 items(due, key = { it.item.name }) { s -> DueRow(s) { editing = s } }
             }
         }
@@ -118,6 +159,11 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     }
 }
 
+@Composable
+private fun Caption(text: String, modifier: Modifier) {
+    Box(modifier) { Caption(text) }
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PromptCard(
@@ -128,71 +174,94 @@ private fun PromptCard(
     onNotShop: () -> Unit,
 ) {
     var selected by remember(p.id) { mutableStateOf(emptySet<MaintenanceItem>()) }
-    HCard(highlight = true) {
-        Text("${p.shopName}에서 출발하시네요", style = MaterialTheme.typography.titleMedium)
+    Panel(glow = true) {
+        Caption("정비 기록 · ${Format.time(p.createdAt)}", color = Palette.accent)
+        Spacer(Modifier.height(6.dp))
+        Text("${p.shopName}에서 출발하시네요", style = MaterialTheme.typography.titleLarge)
         Text(
-            "어떤 정비를 받으셨나요? · ${Format.km(p.odometerKm)} 자동 기록 · ${p.source.label}",
-            color = Palette.sub, style = MaterialTheme.typography.bodyMedium,
+            "어떤 정비를 받으셨나요?  ${Format.km(p.odometerKm)} 자동 기록",
+            color = Palette.sub, style = MaterialTheme.typography.bodyLarge,
         )
-        Spacer(Modifier.height(12.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(20.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             MaintenanceItem.forMode(mode).forEach { item ->
                 val on = item in selected
-                FilterChip(
-                    selected = on,
-                    onClick = { selected = if (on) selected - item else selected + item },
-                    label = { Text(item.label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(vertical = 10.dp)) },
-                )
+                Row(
+                    Modifier
+                        .clip(CircleShape)
+                        .background(if (on) Palette.accent else Palette.card)
+                        .border(1.5.dp, if (on) Palette.accent else Palette.outline, CircleShape)
+                        .clickable { selected = if (on) selected - item else selected + item }
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (on) {
+                        Icon(Icons.Filled.Check, null, tint = Palette.onAccent, modifier = Modifier.size(26.dp))
+                        Spacer(Modifier.width(6.dp))
+                    }
+                    Text(item.label, style = MaterialTheme.typography.bodyLarge, color = if (on) Palette.onAccent else Palette.text)
+                }
             }
         }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = { onSave(selected) }, enabled = selected.isNotEmpty(), modifier = Modifier.height(64.dp)) {
-                Text(if (selected.isEmpty()) "항목을 고르세요" else "${selected.size}개 기록")
+        Spacer(Modifier.height(24.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(
+                onClick = { onSave(selected) },
+                enabled = selected.isNotEmpty(),
+                modifier = Modifier.height(72.dp),
+                colors = ButtonDefaults.buttonColors(disabledContainerColor = Palette.card, disabledContentColor = Palette.sub),
+            ) {
+                Text(if (selected.isEmpty()) "항목을 고르세요" else "${selected.size}개 기록", style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 12.dp))
             }
-            OutlinedButton(onClick = onSkip, modifier = Modifier.height(64.dp)) { Text("정비 안 받음") }
+            OutlinedButton(onClick = onSkip, modifier = Modifier.height(72.dp)) {
+                Text("정비 안 받음", style = MaterialTheme.typography.labelLarge, color = Palette.text)
+            }
             if (p.source != ShopSource.MY_SHOP && p.source != ShopSource.DEMO) {
-                TextButton(onClick = onNotShop, modifier = Modifier.height(64.dp)) { Text("정비소 아님") }
+                TextButton(onClick = onNotShop, modifier = Modifier.height(72.dp)) {
+                    Text("정비소 아님", style = MaterialTheme.typography.labelLarge, color = Palette.sub)
+                }
             }
         }
     }
 }
 
+/** Android Auto 목록 행 + 칸 게이지. */
 @Composable
 private fun DueRow(s: DueStatus, onClick: () -> Unit) {
-    val color = when (s.level) {
-        DueLevel.OVERDUE -> Palette.overdue
-        DueLevel.SOON -> Palette.soon
-        DueLevel.OK -> Palette.ok
-        DueLevel.NO_RECORD -> Palette.none
-    }
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Palette.card),
-        shape = RoundedCornerShape(16.dp),
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+    val color = levelColor(s.level)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(24.dp))
+            .background(Palette.card)
+            .border(1.dp, if (s.level == DueLevel.OVERDUE) Palette.overdue.copy(alpha = 0.6f) else Palette.outline, RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
-            Row {
+        Box(Modifier.size(14.dp).clip(CircleShape).background(color))
+        Spacer(Modifier.width(18.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(s.item.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                Text(Format.remaining(s), color = color, style = MaterialTheme.typography.titleMedium)
-            }
-            s.progress?.let {
-                Spacer(Modifier.height(8.dp))
-                LinearProgressIndicator(
-                    progress = { it.coerceIn(0f, 1f) },
-                    color = color,
-                    trackColor = Palette.cardHigh,
-                    modifier = Modifier.fillMaxWidth().height(8.dp),
-                    drawStopIndicator = {},
+                Text(
+                    if (s.level == DueLevel.NO_RECORD) "기록 없음" else Format.remaining(s),
+                    color = color, style = MaterialTheme.typography.titleMedium,
                 )
             }
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(10.dp))
+            if (s.progress != null) {
+                SegmentBar(s.progress!!, color)
+                Spacer(Modifier.height(10.dp))
+            }
             Text(
                 s.last?.let { "마지막 ${Format.date(it.timeMillis)} · ${Format.km(it.odometerKm)}" + (it.shopName?.let { n -> " · $n" } ?: "") }
-                    ?: "눌러서 마지막 교체를 입력하세요",
-                color = Palette.sub, style = MaterialTheme.typography.bodyMedium,
+                    ?: "주기 ${Format.interval(s.interval)} · 눌러서 마지막 교체 입력",
+                color = Palette.sub, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Palette.none, modifier = Modifier.size(36.dp))
     }
 }
 
@@ -202,11 +271,12 @@ private fun RecordDialog(s: DueStatus, currentKm: Int, onDismiss: () -> Unit, on
     val km = text.filter { it.isDigit() }.toIntOrNull()
     AlertDialog(
         onDismissRequest = onDismiss,
+        containerColor = Palette.cardHigh,
         title = { Text(if (s.last == null) "${s.item.label} 마지막 교체" else "${s.item.label} 교체 기록") },
         text = {
             Column {
                 Text("교체한 시점의 주행거리 (현재 ${Format.km(currentKm)})", color = Palette.sub)
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = text,
                     onValueChange = { text = it.filter { c -> c.isDigit() }.take(7) },
@@ -217,26 +287,10 @@ private fun RecordDialog(s: DueStatus, currentKm: Int, onDismiss: () -> Unit, on
             }
         },
         confirmButton = { Button(onClick = { km?.let(onSave) }, enabled = km != null) { Text("기록") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("취소", color = Palette.sub) } },
     )
 }
 
+/** 설정·기록 화면에서 쓰는 패널 (예전 HCard 호환). */
 @Composable
-fun HCard(highlight: Boolean = false, content: @Composable () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = if (highlight) Palette.cardHigh else Palette.card),
-        shape = RoundedCornerShape(20.dp),
-        border = if (highlight) androidx.compose.foundation.BorderStroke(2.dp, Palette.accent) else null,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(24.dp)) { content() }
-    }
-}
-
-@Composable
-fun SectionTitle(text: String, sub: String? = null, color: Color = Palette.text) {
-    Column(Modifier.padding(top = 8.dp, bottom = 4.dp)) {
-        Text(text, style = MaterialTheme.typography.titleLarge, color = color)
-        sub?.let { Text(it, color = Palette.sub, style = MaterialTheme.typography.bodyMedium) }
-    }
-}
+fun HCard(highlight: Boolean = false, content: @Composable () -> Unit) = Panel(glow = highlight, content = content)
