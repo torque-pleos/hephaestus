@@ -63,7 +63,9 @@ class Detector(
 
     fun onScreenOn() = onMain {
         syncDwell()
-        tracker.onScreenOn(now(), odometerKm()).prompt?.let(::emit)
+        val out = tracker.onScreenOn(now(), odometerKm())
+        Log.i(TAG, "ignition on (screen on): parked=${tracker.session != null} shop=${tracker.session?.shop?.name} prompt=${out.prompt != null}")
+        out.prompt?.let(::emit)
         if (vehicle.state.value.gear == Gear.PARK) checkReminders()
     }
 

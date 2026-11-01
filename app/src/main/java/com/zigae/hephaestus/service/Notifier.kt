@@ -51,8 +51,8 @@ class Notifier(private val context: Context) {
 
     fun due(s: DueStatus) {
         val title = when (s.level) {
-            DueLevel.OVERDUE -> "${s.item.label} 교체 시기가 지났어요"
-            else -> "${s.item.label} 교체 시기가 다가와요"
+            DueLevel.OVERDUE -> "${s.item.label} 시기가 지났어요"
+            else -> "${s.item.label} 시기가 다가와요"
         }
         val n = Notification.Builder(context, CH_DUE)
             .setSmallIcon(R.drawable.ic_wrench)
