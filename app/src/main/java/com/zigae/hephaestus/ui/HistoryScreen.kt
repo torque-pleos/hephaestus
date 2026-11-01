@@ -58,7 +58,7 @@ fun HistoryScreen(graph: AppGraph, data: AppData) {
                             Text(shop ?: "직접 입력", style = MaterialTheme.typography.titleMedium)
                             Text(date, style = MaterialTheme.typography.bodyMedium, color = Palette.sub)
                         }
-                        Text(Format.km(km), style = MaterialTheme.typography.titleLarge, color = Palette.navy)
+                        Text(Format.km(km), style = MaterialTheme.typography.titleLarge, color = Palette.primary)
                     }
                     Spacer(Modifier.height(16.dp))
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

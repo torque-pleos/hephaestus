@@ -81,11 +81,11 @@ private fun Rail(selected: Tab, onSelect: (Tab) -> Unit) {
         Tab.entries.forEach { t ->
             val on = t == selected
             Row(Modifier.fillMaxWidth().height(120.dp).clickable { onSelect(t) }, verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(6.dp).height(64.dp).background(if (on) Palette.navy else Palette.rail))
+                Box(Modifier.width(6.dp).height(64.dp).background(if (on) Palette.primary else Palette.rail))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(t.icon, null, tint = if (on) Palette.navy else Palette.none, modifier = Modifier.size(44.dp))
+                    Icon(t.icon, null, tint = if (on) Palette.primary else Palette.none, modifier = Modifier.size(44.dp))
                     Spacer(Modifier.height(6.dp))
-                    Text(t.label, style = MaterialTheme.typography.bodyMedium, color = if (on) Palette.navy else Palette.sub)
+                    Text(t.label, style = MaterialTheme.typography.bodyMedium, color = if (on) Palette.primary else Palette.sub)
                 }
             }
         }
@@ -112,7 +112,7 @@ private fun ModeSetup(detected: Powertrain?, onPick: (Powertrain) -> Unit) {
                         .size(width = 480.dp, height = 230.dp)
                         .clip(PanelShape)
                         .background(Palette.card)
-                        .border(if (suggested) 3.dp else 0.dp, if (suggested) Palette.navy else Palette.card, PanelShape)
+                        .border(if (suggested) 3.dp else 0.dp, if (suggested) Palette.primary else Palette.card, PanelShape)
                         .clickable { onPick(p) }
                         .padding(32.dp),
                     verticalArrangement = Arrangement.SpaceBetween,
@@ -121,8 +121,8 @@ private fun ModeSetup(detected: Powertrain?, onPick: (Powertrain) -> Unit) {
                         Text(p.label, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
                         if (suggested) {
                             Text(
-                                "차량 정보로 추천", style = MaterialTheme.typography.bodyMedium, color = Palette.onAccent,
-                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Palette.navy).padding(horizontal = 14.dp, vertical = 6.dp),
+                                "차량 정보로 추천", style = MaterialTheme.typography.bodyMedium, color = Palette.onPrimary,
+                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Palette.primary).padding(horizontal = 14.dp, vertical = 6.dp),
                             )
                         }
                     }
@@ -132,7 +132,7 @@ private fun ModeSetup(detected: Powertrain?, onPick: (Powertrain) -> Unit) {
                             style = MaterialTheme.typography.bodyLarge, color = Palette.sub,
                         )
                         Spacer(Modifier.height(12.dp))
-                        Icon(Icons.Filled.Build, null, tint = Palette.navy, modifier = Modifier.size(36.dp).align(Alignment.End))
+                        Icon(Icons.Filled.Build, null, tint = Palette.primary, modifier = Modifier.size(36.dp).align(Alignment.End))
                     }
                 }
             }

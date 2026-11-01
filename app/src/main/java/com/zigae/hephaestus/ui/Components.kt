@@ -33,7 +33,7 @@ import com.zigae.hephaestus.domain.Gear
 val PanelShape = RoundedCornerShape(20.dp)
 val ButtonShape = RoundedCornerShape(10.dp)
 
-/** 흰 카드 (myHyundai 카드). */
+/** 카드. */
 @Composable
 fun Panel(modifier: Modifier = Modifier, padding: Dp = 28.dp, content: @Composable () -> Unit) {
     Column(
@@ -45,11 +45,11 @@ fun Panel(modifier: Modifier = Modifier, padding: Dp = 28.dp, content: @Composab
     ) { content() }
 }
 
-/** 네이비 머리 블록 + 흰 본문 카드 (myHyundai 월렛 카드). */
+/** 강조색 머리 블록 + 본문 카드. */
 @Composable
 fun HeaderPanel(header: @Composable () -> Unit, content: @Composable () -> Unit) {
     Column(Modifier.fillMaxWidth().clip(PanelShape).background(Palette.card)) {
-        Column(Modifier.fillMaxWidth().background(Palette.navy).padding(horizontal = 28.dp, vertical = 24.dp)) { header() }
+        Column(Modifier.fillMaxWidth().background(Palette.headerBg).padding(horizontal = 28.dp, vertical = 24.dp)) { header() }
         Column(Modifier.padding(28.dp)) { content() }
     }
 }
@@ -60,7 +60,7 @@ fun BigNumber(value: String, unit: String, color: Color = Palette.text, small: B
     Row(verticalAlignment = Alignment.Bottom) {
         Text(value, style = if (small) MaterialTheme.typography.displaySmall else MaterialTheme.typography.displayLarge, color = color)
         Spacer(Modifier.width(6.dp))
-        Text(unit, style = MaterialTheme.typography.titleMedium, color = Palette.sub, modifier = Modifier.padding(bottom = if (small) 6.dp else 12.dp))
+        Text(unit, style = MaterialTheme.typography.titleMedium, color = Palette.sub, modifier = Modifier.padding(bottom = if (small) 8.dp else 14.dp))
     }
 }
 
@@ -72,7 +72,7 @@ fun ProgressLine(progress: Float, color: Color, modifier: Modifier = Modifier) {
     }
 }
 
-/** 기어 표시: 현재 기어만 네이비 칸. */
+/** 기어 표시: 현재 기어만 강조색 칸. */
 @Composable
 fun GearIndicator(gear: Gear) {
     val current = when (gear) {
@@ -86,26 +86,46 @@ fun GearIndicator(gear: Gear) {
         listOf("P", "R", "N", "D").forEach { g ->
             val on = g == current
             Box(
-                Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(if (on) Palette.navy else Color.Transparent),
+                Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(if (on) Palette.primary else Color.Transparent),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(g, style = MaterialTheme.typography.labelLarge, color = if (on) Color.White else Palette.none)
+                Text(g, style = MaterialTheme.typography.labelLarge, color = if (on) Palette.onPrimary else Palette.none)
             }
         }
     }
 }
 
-/** 회색 안내 배너 (myHyundai "3일 뒤 정비 예약이 있어요"). */
+/**
+ * 알림 배너: 색 컨테이너 면 + 진한 테두리 + 진한 글자.
+ * [tone]이 null이면 회색 안내.
+ */
 @Composable
-fun InfoBanner(text: String, icon: ImageVector = Icons.Filled.Info, tint: Color = Palette.navy) {
+fun AlertBanner(text: String, tone: Tone? = null, icon: ImageVector = Icons.Filled.Info) {
+    val bg = tone?.container ?: Palette.cardHigh
+    val fg = tone?.onContainer ?: Palette.text
+    val border = tone?.base?.copy(alpha = 0.5f) ?: Palette.cardHigh
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Palette.cardHigh).padding(horizontal = 20.dp, vertical = 16.dp),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
+            .border(1.5.dp, border, RoundedCornerShape(12.dp))
+            .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(28.dp))
+        Icon(icon, null, tint = tone?.base ?: Palette.sub, modifier = Modifier.size(30.dp))
         Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = Palette.text)
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = fg)
     }
+}
+
+/** 상태 배지: strong = 채움(기본색 + 그 위 글자색), weak = 연한 면(컨테이너 + 컨테이너 글자색). */
+@Composable
+fun StatusBadge(text: String, tone: Tone, strong: Boolean) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodyMedium,
+        color = if (strong) tone.on else tone.onContainer,
+        modifier = Modifier.clip(ButtonShape).background(if (strong) tone.base else tone.container)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    )
 }
 
 /** 요약 칸. */
@@ -117,12 +137,12 @@ fun StatTile(value: String, label: String, color: Color, modifier: Modifier = Mo
         Row(verticalAlignment = Alignment.Bottom) {
             Text(value, style = MaterialTheme.typography.displaySmall, color = color)
             Spacer(Modifier.width(4.dp))
-            Text("건", style = MaterialTheme.typography.bodyLarge, color = Palette.sub, modifier = Modifier.padding(bottom = 6.dp))
+            Text("건", style = MaterialTheme.typography.bodyLarge, color = Palette.sub, modifier = Modifier.padding(bottom = 8.dp))
         }
     }
 }
 
-/** 아이콘 + 라벨 + 값 + 꺾쇠 목록 행 (myHyundai 마이카 메뉴). */
+/** 아이콘 + 라벨 + 값 + 꺾쇠 목록 행. */
 @Composable
 fun ListRow(icon: ImageVector?, title: String, value: String? = null, valueColor: Color = Palette.sub, onClick: (() -> Unit)? = null) {
     Row(
@@ -142,18 +162,18 @@ fun ListRow(icon: ImageVector?, title: String, value: String? = null, valueColor
     }
 }
 
-/** 선택 칩: 회색 바탕, 선택 시 네이비. */
+/** 선택 칩: 카드색 바탕, 선택 시 강조색. */
 @Composable
 fun SelectChip(text: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .clip(ButtonShape)
-            .background(if (selected) Palette.navy else Palette.card)
-            .border(1.dp, if (selected) Palette.navy else Palette.outline, ButtonShape)
+            .background(if (selected) Palette.primary else Palette.card)
+            .border(1.dp, if (selected) Palette.primary else Palette.outline, ButtonShape)
             .clickable(onClick = onClick)
             .padding(horizontal = 26.dp, vertical = 18.dp),
     ) {
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = if (selected) Color.White else Palette.text)
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = if (selected) Palette.onPrimary else Palette.text)
     }
 }
 

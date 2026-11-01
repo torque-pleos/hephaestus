@@ -78,7 +78,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                     ListRow(
                         null, item.label,
                         Format.interval(iv) + if (item in data.intervalOverrides) " (변경)" else "",
-                        valueColor = if (item in data.intervalOverrides) Palette.blue else Palette.sub,
+                        valueColor = if (item in data.intervalOverrides) Palette.info.base else Palette.sub,
                     ) { editing = item }
                 }
             }
@@ -122,7 +122,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                         message = "방문 질문을 만들었습니다. 홈과 알림 센터를 확인하세요."
                     }, modifier = Modifier.height(60.dp)) { Text("방문 질문 바로 만들기") }
                 }
-                message?.let { Text(it, color = Palette.accent, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
+                message?.let { Text(it, color = Palette.primary, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
             }
         }
         item {

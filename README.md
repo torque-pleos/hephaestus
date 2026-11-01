@@ -229,9 +229,12 @@ Pleos Connect 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 **myHyundai
 | 항목 + 값 + 꺾쇠 목록 행 | 소모품 관리 목록, 설정 교체 주기 |
 | 네이비 채움 사각 버튼 | 기록하기 / 선택 칩 |
 
-- 상태색은 꼭 필요한 곳만: 교체 필요 빨강, 곧 교체 주황 배지
-- 화면: [홈](docs/screenshots/01-home-visit-prompt.png) · [정비 이력](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
-- 남은 일: HMG 디자인 시스템(Storybook, 사내망) 토큰 확인 후 색·글꼴·간격 값 교체
+- 색 토큰은 색마다 "기본색 · 그 위 글자색 · 컨테이너 면 · 컨테이너 위 글자색"을 한 세트(`Tone`)로 정의 — primary / info / success / warning / danger
+- 교체 단계 색: 여유 = 초록, 곧 교체 = 노랑·주황(연한 배지), 지남 = 빨강(진한 배지). 상태 배너는 "색 컨테이너 면 + 테두리 + 진한 글자"
+- 글자: 차량 화면용으로 웹 기준보다 크게, 행간은 크기의 1.4배
+- **주간/야간**: Pleos 야간 모드(uiMode night)를 따라 자동 전환. 주간은 남색 강조, 야간은 청록 강조 + 큰 강조 면은 진한 컨테이너로 눈부심 감소 (`cmd car_service day-night-mode night|day`로 확인)
+- 대비: 주간·야간 토큰의 글자/배경 조합 전부 4.5:1 이상을 단위 테스트(`ThemeContrastTest`)로 검증
+- 화면: [홈(주간)](docs/screenshots/01-home-visit-prompt.png) · [홈(야간)](docs/screenshots/05-home-night.png) · [정비 이력](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
 
 ## 참고 문서
 

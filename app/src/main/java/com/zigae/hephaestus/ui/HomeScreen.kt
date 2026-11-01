@@ -36,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,11 +60,13 @@ import com.zigae.hephaestus.domain.VisitPrompt
 import java.text.NumberFormat
 import java.util.Locale
 
-fun levelColor(level: DueLevel): Color = when (level) {
-    DueLevel.OVERDUE -> Palette.overdue
-    DueLevel.SOON -> Palette.soon
-    DueLevel.OK -> Palette.ok
-    DueLevel.NO_RECORD -> Palette.none
+/** 교체 단계 → 상태 색 세트 (여유 = 초록, 곧 = 노랑·주황, 지남 = 빨강). 기록 없음은 null. */
+@Composable
+fun levelTone(level: DueLevel): Tone? = when (level) {
+    DueLevel.OVERDUE -> Palette.danger
+    DueLevel.SOON -> Palette.warning
+    DueLevel.OK -> Palette.success
+    DueLevel.NO_RECORD -> null
 }
 
 @Composable
@@ -89,7 +92,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                     Spacer(Modifier.height(16.dp))
                     val parked = vehicle.gear == Gear.PARK
                     val place = navi.address ?: "위치 확인 중"
-                    InfoBanner(
+                    AlertBanner(
                         when {
                             !parked && vehicle.gear == Gear.UNKNOWN -> "차량 정보를 불러오는 중이에요"
                             !parked -> "주행 중이에요"
@@ -97,6 +100,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                             status.resolving -> "$place · 정비소인지 확인하고 있어요"
                             else -> "$place · ${status.parkedSince?.let { Format.time(it) + "부터 " } ?: ""}정차 중"
                         },
+                        tone = if (status.shop != null && parked) Palette.info else null,
                         icon = if (status.shop != null && parked) Icons.Filled.Build else if (parked) Icons.Filled.LocationOn else Icons.Filled.Info,
                     )
                 }
@@ -120,8 +124,8 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    StatTile(due.count { it.level == DueLevel.OVERDUE }.toString(), "교체 시기 지남", Palette.overdue, Modifier.weight(1f))
-                    StatTile(due.count { it.level == DueLevel.SOON }.toString(), "곧 교체", Palette.soon, Modifier.weight(1f))
+                    StatTile(due.count { it.level == DueLevel.OVERDUE }.toString(), "교체 시기 지남", Palette.danger.base, Modifier.weight(1f))
+                    StatTile(due.count { it.level == DueLevel.SOON }.toString(), "곧 교체", Palette.warning.onContainer, Modifier.weight(1f))
                     StatTile(data.records.size.toString(), "정비 기록", Palette.text, Modifier.weight(1f))
                 }
             }
@@ -159,18 +163,20 @@ private fun PromptCard(
     onSkip: () -> Unit,
     onNotShop: () -> Unit,
 ) {
-    var selected by remember(p.id) { mutableStateOf(emptySet<MaintenanceItem>()) }
+    // 주간/야간 전환 때 화면이 다시 만들어져도 고른 항목을 유지한다
+    var selectedKeys by rememberSaveable(p.id) { mutableStateOf(emptyList<String>()) }
+    val selected = selectedKeys.mapNotNull(MaintenanceItem::fromKey).toSet()
     HeaderPanel(header = {
-        Text("${Format.time(p.createdAt)} · ${Format.km(p.odometerKm)}", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.75f))
+        Text("${Format.time(p.createdAt)} · ${Format.km(p.odometerKm)}", style = MaterialTheme.typography.bodyMedium, color = Palette.onHeader.copy(alpha = 0.75f))
         Spacer(Modifier.height(4.dp))
-        Text("${p.shopName}에서 출발하시네요", style = MaterialTheme.typography.titleLarge, color = Color.White)
+        Text("${p.shopName}에서 출발하시네요", style = MaterialTheme.typography.titleLarge, color = Palette.onHeader)
     }) {
         Text("어떤 정비를 받으셨나요?", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(20.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             MaintenanceItem.forMode(mode).forEach { item ->
                 val on = item in selected
-                SelectChip(item.label, on) { selected = if (on) selected - item else selected + item }
+                SelectChip(item.label, on) { selectedKeys = if (on) selectedKeys - item.name else selectedKeys + item.name }
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -199,28 +205,31 @@ private fun PromptCard(
 /** 목록 행: 항목 + 남은 거리 + 얇은 막대 + 마지막 교체. */
 @Composable
 private fun DueRow(s: DueStatus, onClick: () -> Unit) {
-    val color = levelColor(s.level)
+    val tone = levelTone(s.level)
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(s.item.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (s.level == DueLevel.OVERDUE || s.level == DueLevel.SOON) {
-                    Text(
-                        if (s.level == DueLevel.OVERDUE) "교체 필요" else "곧 교체",
-                        style = MaterialTheme.typography.bodyMedium, color = Color.White,
-                        modifier = Modifier.clip(ButtonShape).background(color).padding(horizontal = 12.dp, vertical = 4.dp),
-                    )
-                    Spacer(Modifier.width(14.dp))
+                when (s.level) {
+                    DueLevel.OVERDUE -> StatusBadge("교체 필요", Palette.danger, strong = true)
+                    DueLevel.SOON -> StatusBadge("곧 교체", Palette.warning, strong = false)
+                    else -> {}
                 }
+                if (s.level == DueLevel.OVERDUE || s.level == DueLevel.SOON) Spacer(Modifier.width(14.dp))
                 Text(
                     if (s.level == DueLevel.NO_RECORD) "기록 없음" else Format.remaining(s),
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (s.level == DueLevel.NO_RECORD) Palette.none else if (s.level == DueLevel.OK) Palette.text else color,
+                    color = when (s.level) {
+                        DueLevel.NO_RECORD -> Palette.none
+                        DueLevel.OK -> Palette.text
+                        DueLevel.SOON -> Palette.warning.onContainer
+                        DueLevel.OVERDUE -> Palette.danger.base
+                    },
                 )
             }
             Spacer(Modifier.height(12.dp))
             s.progress?.let {
-                ProgressLine(it, color)
+                ProgressLine(it, tone?.base ?: Palette.none)
                 Spacer(Modifier.height(12.dp))
             }
             Text(
