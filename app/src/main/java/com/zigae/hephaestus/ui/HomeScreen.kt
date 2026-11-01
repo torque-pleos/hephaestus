@@ -211,7 +211,7 @@ private fun RecordDialog(s: DueStatus, currentKm: Int, onDismiss: () -> Unit, on
                     value = text,
                     onValueChange = { text = it.filter { c -> c.isDigit() }.take(7) },
                     suffix = { Text("km") },
-                    singleLine = true,
+                    singleLine = true, textStyle = MaterialTheme.typography.titleMedium,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
             }

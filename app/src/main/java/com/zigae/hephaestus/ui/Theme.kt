@@ -25,6 +25,7 @@ object Palette {
 // 차량 화면은 멀리서 보므로 기본 글자를 크게 잡는다.
 private val type = Typography(
     headlineMedium = TextStyle(fontSize = 46.sp, fontWeight = FontWeight.Bold),
+    headlineSmall = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold), // 대화상자 제목
     titleLarge = TextStyle(fontSize = 36.sp, fontWeight = FontWeight.SemiBold),
     titleMedium = TextStyle(fontSize = 31.sp, fontWeight = FontWeight.SemiBold),
     bodyLarge = TextStyle(fontSize = 28.sp),

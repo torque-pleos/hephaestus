@@ -200,9 +200,9 @@ private fun IntervalDialog(item: MaintenanceItem, current: Interval, default: In
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("기본값 ${Format.interval(default)} · 0은 사용 안 함", color = Palette.sub)
-                OutlinedTextField(km, { km = it.filter(Char::isDigit).take(6) }, suffix = { Text("km") }, singleLine = true,
+                OutlinedTextField(km, { km = it.filter(Char::isDigit).take(6) }, suffix = { Text("km") }, singleLine = true, textStyle = MaterialTheme.typography.titleMedium,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-                OutlinedTextField(months, { months = it.filter(Char::isDigit).take(3) }, suffix = { Text("개월") }, singleLine = true,
+                OutlinedTextField(months, { months = it.filter(Char::isDigit).take(3) }, suffix = { Text("개월") }, singleLine = true, textStyle = MaterialTheme.typography.titleMedium,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
             }
         },
@@ -222,7 +222,7 @@ private fun NameDialog(initial: String, onDismiss: () -> Unit, onSave: (String) 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("내 정비소 등록") },
-        text = { OutlinedTextField(name, { name = it.take(30) }, singleLine = true, label = { Text("이름") }) },
+        text = { OutlinedTextField(name, { name = it.take(30) }, singleLine = true, textStyle = MaterialTheme.typography.titleMedium, label = { Text("이름") }) },
         confirmButton = { Button(onClick = { onSave(name.trim()) }, enabled = name.isNotBlank()) { Text("등록") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } },
     )

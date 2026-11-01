@@ -19,6 +19,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -55,6 +58,12 @@ class Detector(
         navi.onArrived = { name -> Log.i(TAG, "navi arrived at $name") }
         scope.launch {
             vehicle.state.collect { s -> s.detectedMode?.let { if (repo.data.value.detectedMode != it) repo.setDetectedMode(it) } }
+        }
+        // 내 정비소·정비소 아님 등록이 바뀌면 지금 정차 중인 곳을 다시 판별한다
+        scope.launch {
+            repo.data.map { it.places }.distinctUntilChanged().drop(1).collect {
+                onMain { tracker.session?.let(::resolve) }
+            }
         }
     }
 
