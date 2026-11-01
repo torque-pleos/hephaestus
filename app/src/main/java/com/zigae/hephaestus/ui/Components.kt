@@ -189,3 +189,103 @@ fun SectionTitle(text: String, sub: String? = null, color: Color = Palette.text)
 fun Caption(text: String, color: Color = Palette.sub) {
     Text(text, style = MaterialTheme.typography.labelMedium, color = color)
 }
+
+// ---- 입력·시트 (차량 화면: 타이핑 대신 버튼) ----
+
+/** 가운데 뜨는 큰 시트. */
+@Composable
+fun Sheet(onDismiss: () -> Unit, width: Dp = 980.dp, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Column(Modifier.width(width).clip(PanelShape).background(Palette.card).padding(36.dp), content = content)
+    }
+}
+
+@Composable
+fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+    androidx.compose.material3.Button(
+        onClick = onClick, enabled = enabled, shape = ButtonShape, modifier = modifier.height(80.dp),
+        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+            containerColor = Palette.primary, contentColor = Palette.onPrimary,
+            disabledContainerColor = Palette.cardHigh, disabledContentColor = Palette.none,
+        ),
+    ) { Text(text, style = MaterialTheme.typography.labelLarge) }
+}
+
+@Composable
+fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(
+        onClick = onClick, shape = ButtonShape, modifier = modifier.height(80.dp),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, Palette.outline),
+    ) { Text(text, style = MaterialTheme.typography.labelLarge, color = Palette.text) }
+}
+
+/** 작은 조정 버튼 (−1,000 / +100 …). */
+@Composable
+fun StepButton(text: String, onClick: () -> Unit) {
+    Box(
+        Modifier.clip(ButtonShape).background(Palette.cardHigh).clickable(onClick = onClick).padding(horizontal = 22.dp, vertical = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) { Text(text, style = MaterialTheme.typography.bodyLarge, color = Palette.text, maxLines = 1, softWrap = false) }
+}
+
+/** 주행거리 고르기: 현재 값에서 버튼으로 조정. 키보드 없음. */
+@Composable
+fun OdometerPicker(nowKm: Int, value: Int, onChange: (Int) -> Unit) {
+    Column {
+        Row(verticalAlignment = Alignment.Bottom) {
+            BigNumber(java.text.NumberFormat.getIntegerInstance(java.util.Locale.KOREA).format(value), "km")
+            Spacer(Modifier.width(20.dp))
+            if (value != nowKm) {
+                Text(
+                    "지금보다 ${Format.km(nowKm - value)} 전",
+                    style = MaterialTheme.typography.bodyLarge, color = Palette.sub,
+                    modifier = Modifier.padding(bottom = 14.dp),
+                )
+            } else {
+                Text("지금 주행거리", style = MaterialTheme.typography.bodyLarge, color = Palette.sub, modifier = Modifier.padding(bottom = 14.dp))
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf(-10_000, -1_000, -100).forEach { d -> StepButton(Format.km(d).replace("km", "")) { onChange((value + d).coerceAtLeast(0)) } }
+            listOf(100, 1_000, 10_000).forEach { d -> StepButton("+" + Format.km(d).replace("km", "")) { onChange(value + d) } }
+        }
+        if (value != nowKm) {
+            Spacer(Modifier.height(12.dp))
+            Row { StepButton("지금 주행거리(${Format.km(nowKm)})로 되돌리기") { onChange(nowKm) } }
+        }
+    }
+}
+
+/** 교체 주기 고르기: 거리·기간 프리셋 칩. */
+@Composable
+fun IntervalPicker(value: com.zigae.hephaestus.domain.Interval, default: com.zigae.hephaestus.domain.Interval, onChange: (com.zigae.hephaestus.domain.Interval) -> Unit) {
+    val kms = listOf(0, 5_000, 7_000, 10_000, 15_000, 20_000, 40_000, 60_000, 100_000)
+    val months = listOf(0, 6, 12, 24, 36, 48)
+    Column {
+        Caption("주행거리 기준")
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            kms.forEach { k ->
+                SelectChip(if (k == 0) "안 씀" else Format.km(k), value.km == k) {
+                    if (k > 0 || value.months > 0) onChange(com.zigae.hephaestus.domain.Interval(k, value.months))
+                }
+            }
+        }
+        Spacer(Modifier.height(20.dp))
+        Caption("기간 기준")
+        Spacer(Modifier.height(8.dp))
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            months.forEach { m ->
+                SelectChip(if (m == 0) "안 씀" else if (m % 12 == 0) "${m / 12}년" else "${m}개월", value.months == m) {
+                    if (m > 0 || value.km > 0) onChange(com.zigae.hephaestus.domain.Interval(value.km, m))
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("기본값 ${Format.interval(default)}", style = MaterialTheme.typography.bodyMedium, color = Palette.sub)
+    }
+}

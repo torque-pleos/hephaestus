@@ -41,7 +41,8 @@ import com.zigae.hephaestus.domain.Powertrain
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     HOME("홈", Icons.Filled.Home),
-    HISTORY("정비 이력", Icons.AutoMirrored.Filled.List),
+    ITEMS("소모품", Icons.Filled.Build),
+    HISTORY("이력", Icons.AutoMirrored.Filled.List),
     SETTINGS("설정", Icons.Filled.Settings),
 }
 
@@ -56,10 +57,11 @@ fun HephApp(graph: AppGraph) {
             } else {
                 var tab by rememberSaveable { mutableStateOf(Tab.HOME) }
                 Row(Modifier.fillMaxSize()) {
-                    Rail(tab) { tab = it }
+                    Rail(tab, badge = data.prompts.size) { tab = it }
                     Box(Modifier.weight(1f).fillMaxHeight().padding(28.dp)) {
                         when (tab) {
-                            Tab.HOME -> HomeScreen(graph, data, mode)
+                            Tab.HOME -> HomeScreen(graph, data, mode) { tab = Tab.ITEMS }
+                            Tab.ITEMS -> ItemsScreen(graph, data, mode)
                             Tab.HISTORY -> HistoryScreen(graph, data)
                             Tab.SETTINGS -> SettingsScreen(graph, data, mode)
                         }
@@ -70,20 +72,27 @@ fun HephApp(graph: AppGraph) {
     }
 }
 
-/** 흰 세로 탭. 선택 탭은 네이비 아이콘·글자 + 왼쪽 막대. */
+/** 세로 탭. 선택 탭은 강조색 + 왼쪽 막대. 홈에 답하지 않은 질문 수를 점으로 표시. */
 @Composable
-private fun Rail(selected: Tab, onSelect: (Tab) -> Unit) {
+private fun Rail(selected: Tab, badge: Int, onSelect: (Tab) -> Unit) {
     Column(
-        Modifier.fillMaxHeight().width(150.dp).background(Palette.rail).padding(vertical = 24.dp),
+        Modifier.fillMaxHeight().width(150.dp).background(Palette.rail).padding(vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Tab.entries.forEach { t ->
             val on = t == selected
-            Row(Modifier.fillMaxWidth().height(120.dp).clickable { onSelect(t) }, verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().height(118.dp).clickable { onSelect(t) }, verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(6.dp).height(64.dp).background(if (on) Palette.primary else Palette.rail))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(t.icon, null, tint = if (on) Palette.primary else Palette.none, modifier = Modifier.size(44.dp))
+                    Box {
+                        Icon(t.icon, null, tint = if (on) Palette.primary else Palette.none, modifier = Modifier.size(44.dp))
+                        if (t == Tab.HOME && badge > 0) {
+                            Box(
+                                Modifier.align(Alignment.TopEnd).size(18.dp).clip(RoundedCornerShape(9.dp)).background(Palette.danger.base),
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(6.dp))
                     Text(t.label, style = MaterialTheme.typography.bodyMedium, color = if (on) Palette.primary else Palette.sub)
                 }
@@ -119,12 +128,7 @@ private fun ModeSetup(detected: Powertrain?, onPick: (Powertrain) -> Unit) {
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(p.label, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-                        if (suggested) {
-                            Text(
-                                "차량 정보로 추천", style = MaterialTheme.typography.bodyMedium, color = Palette.onPrimary,
-                                modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Palette.primary).padding(horizontal = 14.dp, vertical = 6.dp),
-                            )
-                        }
+                        if (suggested) StatusBadge("차량 정보로 추천", Palette.primaryTone, strong = true)
                     }
                     Column(Modifier.fillMaxWidth()) {
                         Text(

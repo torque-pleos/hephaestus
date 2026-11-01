@@ -31,7 +31,7 @@ adb -s emulator-5556 logcat -s Heph/Service Heph/Detector Heph/Vehicle Heph/Navi
 | `service/Detector.kt` | 이벤트 → 상태 기계, 정비소 판별(규칙 → 지도 검색), 질문·교체 알림 |
 | `service/DetectionService.kt` | `specialUse` 포그라운드 서비스 + 부팅 리시버, `SCREEN_ON` = 시동 ON |
 | `service/ShopSearch.kt` | 카카오 로컬(키 있을 때) / OSM Overpass |
-| `ui/` | 홈(상태·질문 카드·교체 시기), 기록, 설정(차종·내 정비소·주기·감지·데모·진단) |
+| `ui/` | `HephApp`(탭 레일) · `HomeScreen`(질문 카드 + 급한 항목) · `ItemsScreen`(전체 소모품 + `ItemSheet` 기록/주기 변경) · `HistoryScreen` · `SettingsScreen`(차종·내 정비소·감지, 개발용 접힘) · `Components`(패널·배너·배지·주행거리/주기 피커) · `Theme`(주간/야간 토큰) |
 
 ## 에뮬레이터에서 확인한 사실
 
