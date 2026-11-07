@@ -9,6 +9,8 @@
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />
     <uses-permission android:name="pleos.car.permission.CAR_ENERGY" />
     <uses-permission android:name="pleos.car.permission.CAR_SAFETY" />
+    <!-- 경고등(Telltales)은 vendor property라 별도 권한 (normal) -->
+    <uses-permission android:name="pleos.car.permission.PRIVATE_CAR_SAFETY" />
     <!-- 배터리 용량(INFO_EV_BATTERY_CAPACITY) → 차종 추정 -->
     <uses-permission android:name="pleos.car.permission.CAR_INFO" />
     <!-- NaviHelper: 현재 위치·목적지 조회, 데모 목적지 설정 -->
