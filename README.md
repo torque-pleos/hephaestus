@@ -1,5 +1,73 @@
 # Hephaestus — 정비 기록 코파일럿
 
+## 제출 정보
+
+### ① 앱 이름 · 한 줄 소개
+
+**Hephaestus(헤파이스토스)** — 정비소에서 출차할 때 "어떤 정비 받으셨나요?"라고 먼저 묻고 **그 시점 주행거리를 자동으로 붙여** 기록한 뒤, 주행거리 기준으로 다음 교체 시기를 알려주는 Pleos Connect 차계부 앱 (내연기관·전기차 모드).
+
+- 시연 영상: [docs/demo/hephaestus_demo.mp4](docs/demo/hephaestus_demo.mp4) (2분 4초, 1920×1080) · 대본: [docs/demo/video-script.md](docs/demo/video-script.md)
+- 화면: [docs/screenshots/](docs/screenshots/)
+
+### ② 실행 방법
+
+```bash
+# 1) Pleos Connect 에뮬레이터를 켠다 (아래 ③ 참고). adb 시리얼은 환경에 맞게 바꾼다.
+adb -s emulator-5554 install -r -g apk/김지원_Hephaestus_release.apk
+adb -s emulator-5554 shell am start -n com.zigae.hephaestus/.MainActivity
+```
+
+- 첫 실행: 차종(전기차 / 내연기관)을 고른다. 전기차 에뮬레이터는 배터리 용량으로 전기차를 추천한다.
+- 앱을 한 번 열면 감지 서비스(포그라운드)가 시작되고, 이후 재부팅 때도 자동으로 올라온다.
+- 소스에서 빌드하려면: `export JAVA_HOME=<JDK 17>` 후 `./gradlew :app:assembleRelease` → `app/build/outputs/apk/release/app-release.apk` (Android SDK 디버그 키로 서명, 별도 키스토어 불필요).
+
+### ③ 테스트 환경 · 필요한 설정
+
+| 항목 | 내용 |
+| --- | --- |
+| 에뮬레이터 | **Pleos Connect v2.1.0** (Android 14, `system-images;android-34;pleos_car_emulator;arm64-v8a`), macOS Apple Silicon에서 검증. `-no-audio`로 실행 권장(오디오를 켜면 부팅 직후 멈추는 경우가 있음) |
+| 실행 예 | `emulator -avd <AVD 이름> -no-snapshot -no-boot-anim -no-metrics -no-audio` |
+| SDK | Vehicle 2.3.2 (조회만), NaviHelper 3.0.5 — 모두 Playground에서 사용 가능한 범위. 차량 **제어 권한은 쓰지 않는다** |
+| 권한 | 알림, `pleos.car.permission.CAR_INFO`(차종 추정), `pleos.car.permission.PRIVATE_CAR_SAFETY`(경고등). 모두 normal 등급이라 별도 허용 절차 없음 |
+| 외부 API | 정비소 판별용 장소 검색. **카카오 키가 없어도 동작**한다 — 저장소 루트 `secrets.properties`에 `KAKAO_REST_KEY=...`가 없으면 OpenStreetMap(Overpass)으로 검색한다. 키 없이는 "내 정비소"·내비 목적지·설정 > 개발용 데모로 정비소를 판별한다 |
+| 주행거리 | 에뮬레이터 주행거리는 항상 0 → 설정 > 개발용 패널의 "주행거리 보정(+100 / +1,000 / +5,000 / +50,000km)"으로 흉내 낸다 |
+
+**Virtual Console로 차량 상태 조작** (에뮬레이터 안의 차량 시뮬레이터, 포트 8088)
+
+```bash
+adb -s emulator-5554 forward tcp:8088 tcp:8088
+open http://127.0.0.1:8088            # 웹 페이지를 열어 두어야 아래 명령이 반영된다
+curl -X PUT "http://127.0.0.1:8088/vehicle/gear?gear=Park"      # 정차 (Park | Drive)
+curl -X PUT "http://127.0.0.1:8088/vehicle/gear?gear=Drive"     # 출차 → 정비소였다면 기록 질문
+curl -X PUT "http://127.0.0.1:8088/vehicle/telltales/simulator?type=LowVoltBattery&state=On&color=Red"   # 12V 경고등 켬 (color 필수)
+curl -X PUT "http://127.0.0.1:8088/vehicle/telltales/simulator?type=LowVoltBattery&state=Off&color=Red"  # 경고등 끔 → "교체하셨나요?" 질문
+curl -X PUT "http://127.0.0.1:8088/vehicle/ev-battery?field=charge_port_open&value=true"                 # 충전 정차(묻지 않음)
+```
+
+**시동 OFF → ON** (정비소에 맡겼다가 다시 시동 거는 상황)
+
+```bash
+adb -s emulator-5554 shell cmd car_service suspend --simulate --skip-garagemode --wakeup-after 8
+```
+
+**설정 > 개발용 · 데모와 진단** (앱 안에서 펼침)
+
+| 도구 | 용도 |
+| --- | --- |
+| 주행거리 보정 | 교체 시기 계산용 주행거리를 더한다 |
+| 현재 위치 카센터를 목적지로 | 내비 목적지를 "시흥 오토 카센터"로 설정 → 기어 P → D 하면 출차 질문 |
+| 방문 질문 바로 만들기 | 정비소 판별 없이 질문 카드·알림을 바로 띄운다 |
+| 차량 신호 흉내 | 에뮬레이터가 지원하지 않는 엔진오일·브레이크액·변속기 오일 레벨 신호를 켜고 끈다. 끄면 "레벨이 정상으로 돌아왔어요" 질문 |
+| 진단 | 신호 지원 여부, 켜진 경고등, 기어, 내비 연결, 정비소 판별 결과 |
+
+자세한 데모 순서는 [9장 데모 순서](#데모-순서-virtual-console--앱-설정--데모), 영상 대본은 [docs/demo/video-script.md](docs/demo/video-script.md).
+
+### ④ APK 위치
+
+[`apk/김지원_Hephaestus_release.apk`](apk/김지원_Hephaestus_release.apk) — release 빌드, versionName 1.0.0
+
+---
+
 > **이름의 유래**: 헤파이스토스(Hephaestus) — 대장장이와 기술의 신. 신들의 무기와 수레를 만들고 고치던 **정비공**. 차를 손보는 순간을 놓치지 않고 기록한다는 의미.
 
 | 항목 | 내용 |
