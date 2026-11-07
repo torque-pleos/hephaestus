@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,32 +49,28 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item {
             Panel {
-                SectionTitle("차종", data.detectedMode?.let { "차량 정보로 추정: ${it.label}" } ?: "차량 정보로 추정하지 못했어요")
+                SectionTitle("차종", data.detectedMode?.let { "차량 정보 기준 ${it.label} · 관리 항목과 기본 주기가 바뀝니다" } ?: "관리 항목과 기본 주기가 바뀝니다")
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Powertrain.entries.forEach { p -> SelectChip(p.label, p == mode) { graph.repo.setMode(p) } }
                 }
-                Spacer(Modifier.height(10.dp))
-                Text("차종에 따라 관리 항목과 기본 교체 주기가 달라져요.", style = MaterialTheme.typography.bodyMedium, color = Palette.sub)
-            }
-        }
-        item {
-            Panel {
-                SectionTitle("내 정비소", "등록한 곳에 정차하면 바로 정비소로 알아봐요. 기록을 남긴 정비소는 자동으로 등록돼요.")
+                Spacer(Modifier.height(28.dp))
+                Rule()
+                Spacer(Modifier.height(24.dp))
+                SectionTitle("내 정비소", "정차하면 바로 정비소로 판단 · 기록을 남긴 정비소는 자동 등록")
                 val mine = data.places.filter { it.kind == Place.Kind.MY_SHOP }
                 mine.forEach { PlaceRow(it, Icons.Filled.Build) { graph.repo.deletePlace(it.id) } }
                 if (mine.isNotEmpty()) Spacer(Modifier.height(8.dp))
-                SecondaryButton(if (navi.location != null) "현재 위치를 내 정비소로 등록" else "현재 위치 확인 중…") { if (navi.location != null) naming = true }
+                SecondaryButton(if (navi.location != null) "현재 위치를 내 정비소로 등록" else "현재 위치 확인 중") { if (navi.location != null) naming = true }
                 val ignored = data.places.filter { it.kind == Place.Kind.IGNORED }
                 if (ignored.isNotEmpty()) {
                     Spacer(Modifier.height(24.dp))
-                    SectionTitle("정비소 아닌 곳", "이 장소에서는 묻지 않아요")
+                    SectionTitle("정비소 아닌 곳", "이 장소에서는 묻지 않음")
                     ignored.forEach { PlaceRow(it, Icons.Filled.LocationOn) { graph.repo.deletePlace(it.id) } }
                 }
-            }
-        }
-        item {
-            Panel {
-                SectionTitle("정비소에 머문 시간", "이 시간보다 짧게 들른 경우에는 묻지 않아요")
+                Spacer(Modifier.height(28.dp))
+                Rule()
+                Spacer(Modifier.height(24.dp))
+                SectionTitle("정비소에 머문 시간", "이보다 짧게 들르면 묻지 않음")
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     listOf(0, 5, 20, 30).forEach { m ->
                         SelectChip(if (m == 0) "바로" else "${m}분 이상", data.minDwellMinutes == m) { graph.repo.update { it.copy(minDwellMinutes = m) } }
@@ -87,9 +82,9 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
             Panel {
                 ListRow(null, "개발용 · 데모와 진단", if (showDev) "접기" else "펼치기") { showDev = !showDev }
                 if (showDev) {
-                    HorizontalDivider(color = Palette.outline)
+                    Rule()
                     Spacer(Modifier.height(16.dp))
-                    SectionTitle("데모", "에뮬레이터는 주행거리가 0에서 움직이지 않아 보정값을 더해요")
+                    SectionTitle("데모", "에뮬레이터 주행거리는 0 고정 · 보정값을 더함")
                     Text("주행거리 보정 +${Format.km(data.demoOdometerOffsetKm)}", style = MaterialTheme.typography.bodyLarge)
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -116,7 +111,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                     }
                     message?.let { Text(it, color = Palette.info.base, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
                     Spacer(Modifier.height(24.dp))
-                    SectionTitle("차량 신호 흉내", "켜면 소모품 목록에 차량 경고로 뜨고, 끄면 정비된 것으로 보고 기록을 물어요. 12V 경고등은 Virtual Console로도 켤 수 있어요.")
+                    SectionTitle("차량 신호 흉내", "켜면 차량 경고, 끄면 정비된 것으로 보고 기록을 물음 · 12V 경고등은 Virtual Console로도 가능")
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         VehicleSignal.entries.filter { it.item in MaintenanceItem.forMode(mode) }.forEach { s ->
                             val on = s in signals
@@ -149,14 +144,14 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
         Sheet(onDismiss = { naming = false }, width = 860.dp) {
             Text("내 정비소로 등록", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(8.dp))
-            Text("이름을 고르세요. 현재 위치(${navi.address ?: "확인 중"})를 등록해요.", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
+            Text("현재 위치 · ${navi.address ?: "확인 중"}", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
             Spacer(Modifier.height(20.dp))
             suggestions.forEach { name ->
                 ListRow(Icons.Filled.Build, name) {
                     if (at != null) graph.repo.addPlace(name, at, Place.Kind.MY_SHOP)
                     naming = false
                 }
-                HorizontalDivider(color = Palette.outline)
+                Rule()
             }
             Spacer(Modifier.height(20.dp))
             SecondaryButton("취소", Modifier.fillMaxWidth()) { naming = false }

@@ -41,11 +41,11 @@ data class AppColors(
 
 val DayColors = AppColors(
     night = false,
-    bg = Color(0xFFEEF0F3),
+    bg = Color(0xFFF2F3F5),
     rail = Color(0xFFFFFFFF),
     card = Color(0xFFFFFFFF),
     cardHigh = Color(0xFFF3F4F6),
-    outline = Color(0xFFDADDE2),
+    outline = Color(0xFFE3E6EA),
     text = Color(0xFF111317),
     sub = Color(0xFF5F656E),
     none = Color(0xFFB4B9C1),
@@ -99,20 +99,21 @@ object Palette {
 }
 
 // 차량 화면은 멀리서 보므로 웹 기준보다 크게, 행간은 글자 크기의 1.4배.
+// 굵기는 두 단계(Medium/SemiBold)만 쓴다. 숫자는 고정폭(tnum)으로 열이 흔들리지 않게.
 private fun style(size: Int, weight: FontWeight, tracking: TextUnit = 0.sp) =
-    TextStyle(fontSize = size.sp, lineHeight = (size * 1.4f).sp, fontWeight = weight, letterSpacing = tracking)
+    TextStyle(fontSize = size.sp, lineHeight = (size * 1.4f).sp, fontWeight = weight, letterSpacing = tracking, fontFeatureSettings = "tnum")
 
 private val type = Typography(
-    displayLarge = style(76, FontWeight.Bold, (-1).sp),
-    displaySmall = style(48, FontWeight.Bold),
-    headlineMedium = style(44, FontWeight.Bold),
-    headlineSmall = style(34, FontWeight.Bold), // 대화상자 제목
-    titleLarge = style(34, FontWeight.Bold),
-    titleMedium = style(30, FontWeight.SemiBold),
+    displayLarge = style(72, FontWeight.SemiBold, (-1).sp),
+    displaySmall = style(46, FontWeight.SemiBold),
+    headlineMedium = style(42, FontWeight.SemiBold),
+    headlineSmall = style(34, FontWeight.SemiBold), // 대화상자 제목
+    titleLarge = style(34, FontWeight.SemiBold),
+    titleMedium = style(30, FontWeight.Medium),
     bodyLarge = style(28, FontWeight.Normal),
     bodyMedium = style(25, FontWeight.Normal),
-    labelLarge = style(28, FontWeight.SemiBold),
-    labelMedium = style(24, FontWeight.Medium),
+    labelLarge = style(28, FontWeight.Medium),
+    labelMedium = style(24, FontWeight.Normal),
 )
 
 /** 시스템 주간/야간(Pleos 야간 모드 → uiMode night)을 따라 토큰을 바꾼다. */

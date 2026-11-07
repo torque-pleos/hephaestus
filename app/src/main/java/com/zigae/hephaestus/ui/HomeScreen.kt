@@ -14,10 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -47,8 +43,8 @@ import java.text.NumberFormat
 import java.util.Locale
 
 /**
- * 홈 = "지금 할 일". 왼쪽: 정비 기록 질문(있으면 맨 위) + 차량 상태. 오른쪽: 신경 쓸 항목만(교체 필요·곧 교체).
- * 전체 목록·기록 없는 항목은 소모품 탭으로 보낸다.
+ * 홈 = "지금 할 일". 왼쪽: 정비 기록 질문(있으면 맨 위) + 차량 상태. 오른쪽: 신경 쓸 항목만(차량 경고·교체 필요·곧 교체).
+ * 색은 숫자에만 쓰고, 상태는 문장이 아니라 라벨로 적는다.
  */
 @Composable
 fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: () -> Unit) {
@@ -66,7 +62,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
 
     Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         LazyColumn(Modifier.weight(0.46f).fillMaxHeight(), state = listState, verticalArrangement = Arrangement.spacedBy(20.dp)) {
-            saved?.let { item { AlertBanner(it, Palette.success, Icons.Filled.CheckCircle) } }
+            saved?.let { item { SavedNote(it) } }
             items(data.prompts.sortedByDescending { it.createdAt }, key = { it.id }) { p ->
                 PromptCard(p, mode, due, onSave = { items ->
                     graph.repo.addRecords(items, p.odometerKm, p.createdAt, if (p.isSignalOnly) null else p.shopName)
@@ -75,7 +71,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
                     }
                     graph.repo.dismissPrompt(p.id)
                     graph.notifier.cancelVisit(p.id)
-                    saved = "${items.joinToString(", ") { it.label }} 기록했어요 · ${Format.km(p.odometerKm)}"
+                    saved = "${items.joinToString(", ") { it.label }} 기록됨 · ${Format.km(p.odometerKm)}"
                 }, onSkip = {
                     graph.repo.dismissPrompt(p.id)
                     graph.notifier.cancelVisit(p.id)
@@ -83,7 +79,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
                     graph.repo.addPlace(p.shopName, p.at, Place.Kind.IGNORED)
                     graph.repo.dismissPrompt(p.id)
                     graph.notifier.cancelVisit(p.id)
-                    saved = "${p.shopName}은(는) 정비소가 아닌 곳으로 기억할게요"
+                    saved = "${p.shopName} · 정비소 아닌 곳으로 저장"
                 })
             }
             item {
@@ -95,48 +91,42 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
                         }
                         GearIndicator(vehicle.gear)
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(16.dp))
+                    Rule()
+                    Spacer(Modifier.height(16.dp))
                     val parked = vehicle.gear == Gear.PARK
                     val place = navi.address ?: "위치 확인 중"
-                    AlertBanner(
-                        when {
-                            vehicle.gear == Gear.UNKNOWN -> "차량 정보를 불러오는 중이에요"
-                            !parked -> "주행 중이에요"
-                            status.shop != null -> "${status.shop!!.name}에 정차 중 · 출발하면 정비 내용을 여쭤볼게요"
-                            status.resolving -> "$place · 정비소인지 확인하고 있어요"
-                            else -> "$place · ${status.parkedSince?.let { Format.time(it) + "부터 " } ?: ""}정차 중"
-                        },
-                        tone = if (status.shop != null && parked) Palette.info else null,
-                        icon = if (status.shop != null && parked) Icons.Filled.Build else if (parked) Icons.Filled.LocationOn else Icons.Filled.Info,
-                    )
+                    val since = status.parkedSince?.let { " · ${Format.time(it)}부터" } ?: ""
+                    when {
+                        vehicle.gear == Gear.UNKNOWN -> StatusLine("차량 정보 확인 중")
+                        !parked -> StatusLine("주행 중")
+                        status.shop != null -> StatusLine("${status.shop!!.name}$since · 출발할 때 정비 내용을 물어요", Palette.primaryTone, Icons.Filled.Build)
+                        status.resolving -> StatusLine("정차 중 · $place · 정비소 확인 중")
+                        else -> StatusLine("정차 중 · $place$since")
+                    }
                 }
             }
         }
         Panel(Modifier.weight(0.54f).fillMaxHeight(), padding = 0.dp) {
-            Row(Modifier.padding(horizontal = 28.dp, vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("지금 신경 쓸 항목", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-                TextButton(onClick = onOpenItems) { Text("전체 ${due.size}개 보기", style = MaterialTheme.typography.bodyLarge, color = Palette.info.base) }
-            }
-            HorizontalDivider(color = Palette.outline)
+            GroupHeader("지금 신경 쓸 항목", trailing = "전체 ${due.size}", onClick = onOpenItems)
+            Rule()
             Column(Modifier.padding(horizontal = 28.dp)) {
                 if (attention.isEmpty()) {
-                    Spacer(Modifier.height(20.dp))
-                    AlertBanner("교체가 급한 소모품이 없어요", Palette.success, Icons.Filled.CheckCircle)
+                    Text("급한 항목 없음", style = MaterialTheme.typography.bodyLarge, color = Palette.sub, modifier = Modifier.padding(vertical = 22.dp))
                     due.firstOrNull { it.level == DueLevel.OK }?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Caption("가장 먼저 돌아오는 항목")
+                        Rule()
                         DueRow(it) { open = it.item.name }
                     }
                 } else {
                     val shown = attention.take(5)
                     shown.forEachIndexed { i, s ->
                         DueRow(s) { open = s.item.name }
-                        if (i < shown.lastIndex) HorizontalDivider(color = Palette.outline)
+                        if (i < shown.lastIndex) Rule()
                     }
                 }
                 if (noRecord > 0) {
-                    HorizontalDivider(color = Palette.outline)
-                    ListRow(null, "기록 없는 항목 ${noRecord}개", "입력하면 알려드려요", valueColor = Palette.info.base, onClick = onOpenItems)
+                    Rule()
+                    ListRow(null, "기록 없음", "$noRecord", onClick = onOpenItems)
                 }
             }
         }
@@ -149,7 +139,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
     }
 }
 
-/** 정비 기록 질문. 교체 예정이던 항목을 앞에 두어 바로 고르게 한다. */
+/** 정비 기록 질문. 화면에서 유일하게 색 면을 쓰는 블록. 교체 예정이던 항목을 앞에 두어 바로 고르게 한다. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PromptCard(
@@ -187,7 +177,7 @@ private fun PromptCard(
         Text(if (p.isSignalOnly) "교체하셨나요? 보충만 했다면 기록하지 않아요." else "어떤 정비를 받으셨나요?", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(16.dp))
         if (fromSignals.isNotEmpty()) {
-            Caption("차량 신호로 확인된 항목")
+            Caption("차량 신호로 확인됨")
             Spacer(Modifier.height(8.dp))
             chips(fromSignals)
             Spacer(Modifier.height(16.dp))

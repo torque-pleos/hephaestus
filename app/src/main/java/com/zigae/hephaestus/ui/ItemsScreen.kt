@@ -14,8 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -60,7 +59,7 @@ fun dueStatuses(graph: AppGraph, data: AppData, mode: Powertrain): List<DueStatu
     )
 }
 
-/** 소모품 전체: 단계별 묶음. 항목을 누르면 상세 시트에서 기록·주기 변경. */
+/** 소모품 전체: 한 면 안에서 단계별 묶음. 항목을 누르면 상세 시트에서 기록·주기 변경. */
 @Composable
 fun ItemsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     val due = dueStatuses(graph, data, mode)
@@ -68,42 +67,38 @@ fun ItemsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     var message by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(message) { if (message != null) { delay(5_000); message = null } }
 
-    val sections = listOf(
-        DueLevel.OVERDUE to "교체 필요",
-        DueLevel.SOON to "곧 교체",
-        DueLevel.OK to "여유 있음",
-        DueLevel.NO_RECORD to "기록 없음 · 마지막 교체를 입력하면 알려드려요",
-    )
+    // 차량이 지금 경고하는 항목은 교체 단계와 상관없이 맨 위
+    val groups = listOf(
+        Triple("warning", "차량 경고", due.filter { it.warning }),
+        Triple(DueLevel.OVERDUE.name, "교체 필요", due.filter { it.level == DueLevel.OVERDUE && !it.warning }),
+        Triple(DueLevel.SOON.name, "곧 교체", due.filter { it.level == DueLevel.SOON && !it.warning }),
+        Triple(DueLevel.OK.name, "여유 있음", due.filter { it.level == DueLevel.OK && !it.warning }),
+        Triple(DueLevel.NO_RECORD.name, "기록 없음", due.filter { it.level == DueLevel.NO_RECORD && !it.warning }),
+    ).filter { it.third.isNotEmpty() }
+
     Column {
-        Row(verticalAlignment = Alignment.Bottom) {
+        Row(verticalAlignment = Alignment.Bottom, modifier = Modifier.padding(bottom = 16.dp)) {
             Text("소모품", style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
-            Text("${mode.label} · ${due.size}개 항목", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
+            Text("${mode.label} · ${due.size}", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
         }
-        Spacer(Modifier.height(16.dp))
         message?.let {
-            AlertBanner(it, Palette.success, Icons.Filled.CheckCircle)
+            SavedNote(it)
             Spacer(Modifier.height(16.dp))
         }
-        // 차량이 지금 경고하는 항목은 교체 단계와 상관없이 맨 위 묶음으로
-        val grouped = listOf<Triple<String, String, List<DueStatus>>>(
-            Triple("warning", "차량 경고 · 차량이 부족·이상을 알리고 있어요", due.filter { it.warning }),
-        ) + sections.map { (level, title) -> Triple(level.name, title, due.filter { it.level == level && !it.warning }) }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            grouped.forEach { (key, title, rows) ->
-                if (rows.isEmpty()) return@forEach
-                val level = DueLevel.entries.firstOrNull { it.name == key }
-                item(key = key) {
-                    Panel(padding = 0.dp) {
-                        Row(Modifier.padding(horizontal = 28.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                            val tone = if (level == null) Palette.danger else levelTone(level)
-                            tone?.let { StatusBadge("${rows.size}", it, strong = level == null || level == DueLevel.OVERDUE); Spacer(Modifier.width(12.dp)) }
-                            Text(title, style = MaterialTheme.typography.titleMedium, color = if (level == DueLevel.NO_RECORD) Palette.sub else Palette.text)
-                        }
-                        HorizontalDivider(color = Palette.outline)
-                        rows.forEachIndexed { i, s ->
-                            DueRow(s, Modifier.padding(horizontal = 28.dp)) { open = s.item.name }
-                            if (i < rows.lastIndex) HorizontalDivider(color = Palette.outline, modifier = Modifier.padding(horizontal = 28.dp))
-                        }
+        Panel(padding = 0.dp) {
+            LazyColumn {
+                groups.forEachIndexed { gi, (key, title, rows) ->
+                    item(key = "h-$key") {
+                        if (gi > 0) Spacer(Modifier.height(12.dp))
+                        GroupHeader(
+                            title, rows.size,
+                            color = when (key) { "warning" -> Palette.danger.base; DueLevel.NO_RECORD.name -> Palette.sub; else -> Palette.text },
+                        )
+                        Rule()
+                    }
+                    items(rows, key = { it.item.name }) { s ->
+                        DueRow(s, Modifier.padding(horizontal = 28.dp)) { open = s.item.name }
+                        if (s !== rows.last()) Rule(Modifier.padding(horizontal = 28.dp))
                     }
                 }
             }
@@ -117,27 +112,32 @@ fun ItemsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     }
 }
 
-/** 목록 행: 항목 + 남은 거리 + 얇은 막대 + 마지막 교체. */
+/** 목록 행: 항목 + 남은 거리 + 얇은 막대 + 마지막 교체. 색은 오른쪽 값 하나에만 쓴다. */
 @Composable
 fun DueRow(s: DueStatus, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val tone = levelTone(s.level)
     Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(s.item.label, style = MaterialTheme.typography.titleMedium)
                 if (s.warning) {
-                    Spacer(Modifier.width(12.dp))
-                    StatusBadge("차량 경고", Palette.danger, strong = true)
+                    Icon(Icons.Filled.Warning, null, tint = Palette.danger.base, modifier = Modifier.size(28.dp))
+                    Spacer(Modifier.width(10.dp))
                 }
+                Text(s.item.label, style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.weight(1f))
                 Text(
-                    if (s.level == DueLevel.NO_RECORD) "입력하기" else Format.remaining(s),
+                    when {
+                        s.warning -> "차량 경고" // 남은 거리보다 지금 차량이 알리는 상태가 우선
+                        s.level == DueLevel.NO_RECORD -> "입력"
+                        else -> Format.remaining(s)
+                    },
                     style = MaterialTheme.typography.titleMedium,
-                    color = when (s.level) {
-                        DueLevel.NO_RECORD -> Palette.info.base
-                        DueLevel.OK -> Palette.text
-                        DueLevel.SOON -> Palette.warning.onContainer
-                        DueLevel.OVERDUE -> Palette.danger.base
+                    color = when {
+                        s.warning -> Palette.danger.base
+                        s.level == DueLevel.NO_RECORD -> Palette.sub
+                        s.level == DueLevel.OK -> Palette.text
+                        s.level == DueLevel.SOON -> Palette.warning.onContainer
+                        else -> Palette.danger.base
                     },
                 )
             }
@@ -147,8 +147,8 @@ fun DueRow(s: DueStatus, modifier: Modifier = Modifier, onClick: () -> Unit) {
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                s.last?.let { "마지막 교체 ${Format.date(it.timeMillis)} · ${Format.km(it.odometerKm)}" + (it.shopName?.let { n -> " · $n" } ?: "") }
-                    ?: "교체 주기 ${Format.interval(s.interval)}",
+                (s.last?.let { "마지막 교체 ${Format.date(it.timeMillis)} · ${Format.km(it.odometerKm)}" + (it.shopName?.let { n -> " · $n" } ?: "") }
+                    ?: "교체 주기 ${Format.interval(s.interval)}") + if (s.warning && s.level != DueLevel.NO_RECORD) " · ${Format.remaining(s)}" else "",
                 color = Palette.sub, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         }
@@ -179,18 +179,16 @@ fun ItemSheet(graph: AppGraph, data: AppData, mode: Powertrain, s: DueStatus, on
 
     fun record(atKm: Int) {
         graph.repo.addRecords(listOf(s.item), atKm, System.currentTimeMillis(), null)
-        onDone("${s.item.label} 기록했어요 · ${Format.km(atKm)} · ${nextDueText(atKm, s.interval)}")
+        onDone("${s.item.label} 기록됨 · ${Format.km(atKm)} · ${nextDueText(atKm, s.interval)}")
     }
 
     Sheet(onDismiss = onClose) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.Bottom) {
             Text(s.item.label, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-            when (s.level) {
-                DueLevel.OVERDUE -> StatusBadge("교체 필요", Palette.danger, strong = true)
-                DueLevel.SOON -> StatusBadge("곧 교체", Palette.warning, strong = false)
-                DueLevel.OK -> StatusBadge("여유 있음", Palette.success, strong = false)
-                DueLevel.NO_RECORD -> {}
-            }
+            Text(
+                when (s.level) { DueLevel.OVERDUE -> "교체 필요"; DueLevel.SOON -> "곧 교체"; DueLevel.OK -> "여유 있음"; DueLevel.NO_RECORD -> "기록 없음" },
+                style = MaterialTheme.typography.bodyLarge, color = levelTone(s.level)?.base ?: Palette.sub,
+            )
         }
         Spacer(Modifier.height(24.dp))
         when (step) {
@@ -200,12 +198,12 @@ fun ItemSheet(graph: AppGraph, data: AppData, mode: Powertrain, s: DueStatus, on
                     s.progress?.let { Spacer(Modifier.height(12.dp)); ProgressLine(it, levelTone(s.level)?.base ?: Palette.none) }
                     Spacer(Modifier.height(20.dp))
                 } else {
-                    Text("마지막으로 교체한 시점을 알려주시면 다음 교체 시기를 챙겨드려요.", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
+                    Text("마지막 교체를 입력하면 다음 시기를 계산해요.", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
                     Spacer(Modifier.height(20.dp))
                 }
                 ListRow(null, "마지막 교체", s.last?.let { "${Format.date(it.timeMillis)} · ${Format.km(it.odometerKm)}" + (it.shopName?.let { n -> " · $n" } ?: "") } ?: "기록 없음")
-                HorizontalDivider(color = Palette.outline)
-                ListRow(null, "교체 주기", Format.interval(s.interval) + if (s.item in data.intervalOverrides) " (변경함)" else "", valueColor = Palette.info.base) { step = Step.INTERVAL }
+                Rule()
+                ListRow(null, "교체 주기", Format.interval(s.interval) + if (s.item in data.intervalOverrides) " (변경함)" else "", valueColor = Palette.text) { step = Step.INTERVAL }
                 Spacer(Modifier.height(28.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                     PrimaryButton(if (s.level == DueLevel.NO_RECORD) "지금 주행거리로 입력 · ${Format.km(nowKm)}" else "지금 교체했어요 · ${Format.km(nowKm)}", Modifier.weight(1.3f)) { record(nowKm) }
@@ -237,7 +235,7 @@ fun ItemSheet(graph: AppGraph, data: AppData, mode: Powertrain, s: DueStatus, on
                         graph.repo.update { d ->
                             d.copy(intervalOverrides = if (iv == default) d.intervalOverrides - s.item else d.intervalOverrides + (s.item to iv))
                         }
-                        onDone("${s.item.label} 교체 주기를 ${Format.interval(iv)}로 바꿨어요")
+                        onDone("${s.item.label} 교체 주기 ${Format.interval(iv)}로 변경")
                     }
                 }
             }

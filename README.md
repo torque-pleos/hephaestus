@@ -211,10 +211,10 @@
 | 내 정비소 등록 (설정) | ✅ 이름 제안 시트(주소 기반·내비 목적지·단골 카센터)에서 고르면 등록, 정차 중이던 현재 위치가 즉시 `(내 정비소)`로 재판별 |
 | 주행 중 | ✅ DO 미선언 → 시스템이 "주행 중에는 사용할 수 없습니다"로 가림 ([스크린샷](docs/screenshots/04-blocked-while-driving.png)) |
 | 차량 경고등 켜짐 (Virtual Console `telltales/simulator?type=LowVoltBattery&state=On&color=Red`) | ✅ 홈·소모품에 "12V 배터리 `차량 경고`" 맨 위 ([스크린샷](docs/screenshots/10-home-vehicle-warning.png)); 계기판에도 경고등 표시 |
-| 정비소 정차 중 경고등 꺼짐 | ✅ `signals [BATTERY_12V_WARNING] attached to prompt` → 출차 질문에 "차량 신호로 확인된 항목: 12V 배터리" 미리 선택 ([스크린샷](docs/screenshots/11-home-prompt-with-signal.png)) → 기록 |
+| 정비소 정차 중 경고등 꺼짐 | ✅ `signals [BATTERY_12V_WARNING] attached to prompt` → 출차 질문에 "차량 신호로 확인된 항목: 12V 배터리" 미리 선택 → 기록 |
 | 정비소 아닌 곳에서 경고등 꺼짐 | ✅ 카드 "12V 배터리 경고등이 꺼졌어요 · 교체하셨나요?" + [보충만 했어요] ([스크린샷](docs/screenshots/12-home-signal-prompt.png)) |
 | 내연기관 모드 · 브레이크액 흉내 켬 | ✅ 소모품 탭 맨 위 "차량 경고" 묶음에 브레이크액 ([스크린샷](docs/screenshots/13-items-vehicle-warning.png)) |
-| 브레이크액 흉내 끔 (12V 질문이 남아 있을 때) | ✅ 기다리던 질문에 합쳐져 "12V 배터리 경고등이 꺼졌어요 · 브레이크액 레벨이 정상으로 돌아왔어요", 두 항목 미리 선택 → "2개 기록하기" ([스크린샷](docs/screenshots/14-home-merged-signal-prompt.png)) |
+| 브레이크액 흉내 끔 (12V 질문이 남아 있을 때) | ✅ 기다리던 질문에 합쳐져 "12V 배터리 경고등이 꺼졌어요 · 브레이크액 레벨이 정상으로 돌아왔어요", 두 항목 미리 선택 → "2개 기록하기" |
 | 브레이크액 흉내 끔 → [보충만 했어요] | ✅ 기록 없이 카드만 닫힘 |
 | 레벨 상태 Capability | ✅ 전기차 에뮬레이터는 엔진오일·브레이크액·변속기 오일 모두 `ERROR_NOT_SUPPORTED_PROPERTY` → 미지원으로 표시, 설정 > 개발용 "차량 신호 흉내"로 데모 |
 | 단위 테스트 | ✅ 34개 (방문 감지 상태 기계, 차량 신호 추적·병합, 교체 시기, 정비소 판별, 쿨다운, 저장 형식) |
@@ -242,7 +242,19 @@
 
 ## 10. 디자인 · 사용성
 
-Pleos 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 myHyundai 앱의 시각 언어(연회색 배경 + 흰 카드 + 남색 주색)를 따랐다. 색은 "기본·그 위 글자·연한 면·면 위 글자" 세트(`Tone`)로 정의하고, 주간/야간 토큰 전부 대비 4.5:1 이상을 단위 테스트로 검증한다.
+Pleos 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 myHyundai 앱의 시각 언어(연회색 배경 + 흰 면 + 남색 주색)를 따랐다. 색은 "기본·그 위 글자·연한 면·면 위 글자" 세트(`Tone`)로 정의하고, 주간/야간 토큰 전부 대비 4.5:1 이상을 단위 테스트로 검증한다.
+
+### 2026-11-07 정리: "생성형 UI" 티 걷어내기
+
+`audit-ai-design-slop` 스킬로 감사한 결과 근본 원인은 셋이었고, 부품 단위로 한 번에 고쳤다.
+
+| 원인 | 전 | 후 |
+| --- | --- | --- |
+| 모든 메시지를 "색 면 + 테두리 + 아이콘 + 문장" 배너로 처리 | 정차 안내(파랑)·저장 확인(초록)·급한 항목 없음(초록)·로딩(회색) 전부 배너 | 상태는 글자 한 줄(`StatusLine`), 저장 확인만 연한 면 한 겹(`SavedNote`). 색 면이 있는 블록은 질문 카드 머리 하나 |
+| 알약 배지·파란 링크로 강조 | "차량 경고" 빨간 알약, 묶음 개수 초록 알약, "차량 정보로 추천" 알약, "입력하기"·"전체 N개 보기" 파란 글자 | 색은 오른쪽 값 하나에만. 경고는 작은 아이콘 + 빨간 값, 개수는 회색 숫자, 링크색 없음 |
+| 카드 안에 카드, 큰 둥근 모서리, 설명하는 문장 라벨 | 이력·설정·소모품 묶음마다 카드, radius 20, "가장 먼저 돌아오는 항목"·"입력하면 알려드려요" | 화면당 면 하나 + 구분선, radius 12, 명사형 라벨("급한 항목 없음", "기록 없음 6", "정차 중 · 수정구 시흥동 · 05:31부터") |
+
+그 밖에: 굵기 두 단계(Medium/SemiBold)만 사용, 숫자 고정폭(tnum), 칩 테두리 제거, 이력 항목의 × 아이콘 제거(누르면 확인 시트).
 
 ### 사용성 원칙 (Pleos 가이드: 1~2초 안에 파악, 한 손 조작)
 
@@ -252,17 +264,16 @@ Pleos 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 myHyundai 앱의 �
 | 선택지 줄이기 | 질문 카드에서 **교체 예정이던 항목을 앞에** 따로 묶음 → 보통 1~2탭으로 끝 |
 | 타이핑 없음 | 주행거리는 ±100/1,000/10,000 버튼, 교체 주기는 프리셋 칩. 키보드를 띄우지 않음 |
 | 한 자리에서 끝내기 | 항목을 누르면 상세 시트: "지금 교체했어요"(1탭) · 다른 주행거리로 · 교체 주기 변경 |
-| 피드백 | 기록·변경 후 초록 확인 배너("타이어 위치 교환 기록했어요 · 48,900km · 다음 교체 56,900km") |
+| 피드백 | 기록·변경 후 연한 초록 한 줄("타이어 위치 교환 기록됨 · 48,900km · 다음 교체 56,900km"), 6초 뒤 사라짐 |
 | 실수 방지 | 이력 삭제는 확인 시트. 개발용 데모·진단은 설정 맨 아래 접어 둠 |
 | 주행 중 | DO 미선언 → 시스템이 화면을 가림. 알림은 정차 중에만 |
 
 ### 화면
 
-- [홈 · 질문 카드](docs/screenshots/01-home-visit-prompt.png) · [홈 · 급한 항목 없음](docs/screenshots/09-home-all-clear.png)
-- [소모품 · 차량 경고 묶음](docs/screenshots/13-items-vehicle-warning.png) · [질문 병합](docs/screenshots/14-home-merged-signal-prompt.png)
-- [홈 · 차량 경고](docs/screenshots/10-home-vehicle-warning.png) · [출차 질문 + 차량 신호](docs/screenshots/11-home-prompt-with-signal.png) · [차량 신호 질문](docs/screenshots/12-home-signal-prompt.png)
-- [소모품](docs/screenshots/07-items.png) · [주행거리 고르기](docs/screenshots/06-odometer-picker.png) · [교체 주기 고르기](docs/screenshots/08-interval-picker.png)
-- [정비 이력 · 삭제 확인](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
+- [홈 · 출차 질문 카드](docs/screenshots/01-home-visit-prompt.png) · [홈 · 급한 항목 없음](docs/screenshots/09-home-all-clear.png) · [홈 · 야간](docs/screenshots/15-home-night.png)
+- [홈 · 차량 경고](docs/screenshots/10-home-vehicle-warning.png) · [차량 신호 질문](docs/screenshots/12-home-signal-prompt.png)
+- [소모품 · 차량 경고 묶음](docs/screenshots/13-items-vehicle-warning.png) · [항목 시트](docs/screenshots/07-items.png) · [주행거리 고르기](docs/screenshots/06-odometer-picker.png) · [교체 주기 고르기](docs/screenshots/08-interval-picker.png)
+- [정비 이력](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
 
 ## 참고 문서
 

@@ -109,9 +109,9 @@ private fun ModeSetup(detected: Powertrain?, onPick: (Powertrain) -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("차종을 선택해 주세요", style = MaterialTheme.typography.headlineMedium)
+        Text("차종 선택", style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(10.dp))
-        Text("정비소에 다녀오면 먼저 묻고, 그때 주행거리를 붙여 기록해 드려요", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
+        Text("정비소에서 출발할 때 묻고, 그때 주행거리를 붙여 기록합니다", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
         Spacer(Modifier.height(48.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
             Powertrain.entries.forEach { p ->
@@ -121,14 +121,14 @@ private fun ModeSetup(detected: Powertrain?, onPick: (Powertrain) -> Unit) {
                         .size(width = 480.dp, height = 230.dp)
                         .clip(PanelShape)
                         .background(Palette.card)
-                        .border(if (suggested) 3.dp else 0.dp, if (suggested) Palette.primary else Palette.card, PanelShape)
+                        .border(if (suggested) 2.dp else 0.dp, if (suggested) Palette.primary else Palette.card, PanelShape)
                         .clickable { onPick(p) }
                         .padding(32.dp),
                     verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(p.label, style = MaterialTheme.typography.headlineMedium, modifier = Modifier.weight(1f))
-                        if (suggested) StatusBadge("차량 정보로 추천", Palette.primaryTone, strong = true)
+                    Column {
+                        Text(p.label, style = MaterialTheme.typography.headlineMedium)
+                        if (suggested) Text("차량 정보로 추천", style = MaterialTheme.typography.bodyLarge, color = Palette.primary)
                     }
                     Column(Modifier.fillMaxWidth()) {
                         Text(

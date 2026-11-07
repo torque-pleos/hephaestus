@@ -1,7 +1,6 @@
 package com.zigae.hephaestus.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -30,8 +29,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.zigae.hephaestus.domain.Gear
 
-val PanelShape = RoundedCornerShape(20.dp)
-val ButtonShape = RoundedCornerShape(10.dp)
+val PanelShape = RoundedCornerShape(12.dp)
+val ButtonShape = RoundedCornerShape(8.dp)
 
 /** 카드. */
 @Composable
@@ -67,8 +66,8 @@ fun BigNumber(value: String, unit: String, color: Color = Palette.text, small: B
 /** 얇은 진행 막대. */
 @Composable
 fun ProgressLine(progress: Float, color: Color, modifier: Modifier = Modifier) {
-    Box(modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Palette.cardHigh)) {
-        Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(8.dp).clip(RoundedCornerShape(4.dp)).background(color))
+    Box(modifier.fillMaxWidth().height(5.dp).background(Palette.cardHigh)) {
+        Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).height(5.dp).background(color))
     }
 }
 
@@ -96,37 +95,54 @@ fun GearIndicator(gear: Gear) {
 }
 
 /**
- * 알림 배너: 색 컨테이너 면 + 진한 테두리 + 진한 글자.
- * [tone]이 null이면 회색 안내.
+ * 상태 한 줄: 작은 아이콘 + 글. 면·테두리 없이 글자색만으로 톤을 낸다.
+ * (색 면 + 테두리 + 아이콘 + 문장을 겹치면 모든 메시지가 경고처럼 보인다.)
  */
 @Composable
-fun AlertBanner(text: String, tone: Tone? = null, icon: ImageVector = Icons.Filled.Info) {
-    val bg = tone?.container ?: Palette.cardHigh
-    val fg = tone?.onContainer ?: Palette.text
-    val border = tone?.base?.copy(alpha = 0.5f) ?: Palette.cardHigh
-    Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg)
-            .border(1.5.dp, border, RoundedCornerShape(12.dp))
-            .padding(horizontal = 20.dp, vertical = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(icon, null, tint = tone?.base ?: Palette.sub, modifier = Modifier.size(30.dp))
-        Spacer(Modifier.width(12.dp))
-        Text(text, style = MaterialTheme.typography.bodyLarge, color = fg)
+fun StatusLine(text: String, tone: Tone? = null, icon: ImageVector? = null, modifier: Modifier = Modifier) {
+    Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        icon?.let {
+            Icon(it, null, tint = tone?.base ?: Palette.sub, modifier = Modifier.size(26.dp))
+            Spacer(Modifier.width(10.dp))
+        }
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = tone?.onContainer ?: Palette.sub)
     }
 }
 
-/** 상태 배지: strong = 채움(기본색 + 그 위 글자색), weak = 연한 면(컨테이너 + 컨테이너 글자색). */
+/** 저장 직후 확인: 연한 면 한 겹만. 홈·소모품에서 6초 뒤 사라진다. */
 @Composable
-fun StatusBadge(text: String, tone: Tone, strong: Boolean) {
-    Text(
-        text,
-        style = MaterialTheme.typography.bodyMedium,
-        color = if (strong) tone.on else tone.onContainer,
-        modifier = Modifier.clip(ButtonShape).background(if (strong) tone.base else tone.container)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
-    )
+fun SavedNote(text: String) {
+    Row(
+        Modifier.fillMaxWidth().clip(ButtonShape).background(Palette.success.container).padding(horizontal = 20.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(Icons.Filled.Check, null, tint = Palette.success.onContainer, modifier = Modifier.size(26.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge, color = Palette.success.onContainer)
+    }
 }
+
+/** 묶음 머리: 제목 + 회색 개수. 알약 배지 대신 글자만. */
+@Composable
+fun GroupHeader(title: String, count: Int? = null, color: Color = Palette.text, trailing: String? = null, onClick: (() -> Unit)? = null) {
+    Row(
+        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(horizontal = 28.dp, vertical = 20.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(title, style = MaterialTheme.typography.titleMedium, color = color)
+        count?.let {
+            Spacer(Modifier.width(10.dp))
+            Text("$it", style = MaterialTheme.typography.titleMedium, color = Palette.none)
+        }
+        Spacer(Modifier.weight(1f))
+        trailing?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = Palette.sub) }
+        if (onClick != null) Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Palette.none, modifier = Modifier.size(30.dp))
+    }
+}
+
+@Composable
+fun Rule(modifier: Modifier = Modifier) = androidx.compose.material3.HorizontalDivider(modifier, color = Palette.outline)
 
 /** 요약 칸. */
 @Composable
@@ -162,16 +178,15 @@ fun ListRow(icon: ImageVector?, title: String, value: String? = null, valueColor
     }
 }
 
-/** 선택 칩: 카드색 바탕, 선택 시 강조색. */
+/** 선택 칩: 회색 면, 선택 시 강조색. 테두리 없음. */
 @Composable
 fun SelectChip(text: String, selected: Boolean, onClick: () -> Unit) {
     Box(
         Modifier
             .clip(ButtonShape)
-            .background(if (selected) Palette.primary else Palette.card)
-            .border(1.dp, if (selected) Palette.primary else Palette.outline, ButtonShape)
+            .background(if (selected) Palette.primary else Palette.cardHigh)
             .clickable(onClick = onClick)
-            .padding(horizontal = 26.dp, vertical = 18.dp),
+            .padding(horizontal = 24.dp, vertical = 16.dp),
     ) {
         Text(text, style = MaterialTheme.typography.bodyLarge, color = if (selected) Palette.onPrimary else Palette.text)
     }
@@ -218,7 +233,7 @@ fun PrimaryButton(text: String, modifier: Modifier = Modifier, enabled: Boolean 
 fun SecondaryButton(text: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     androidx.compose.material3.OutlinedButton(
         onClick = onClick, shape = ButtonShape, modifier = modifier.height(80.dp),
-        border = androidx.compose.foundation.BorderStroke(1.5.dp, Palette.outline),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Palette.outline),
     ) { Text(text, style = MaterialTheme.typography.labelLarge, color = Palette.text) }
 }
 
