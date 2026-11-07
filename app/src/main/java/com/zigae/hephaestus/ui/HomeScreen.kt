@@ -65,7 +65,8 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
             saved?.let { item { SavedNote(it) } }
             items(data.prompts.sortedByDescending { it.createdAt }, key = { it.id }) { p ->
                 PromptCard(p, mode, due, onSave = { items ->
-                    graph.repo.addRecords(items, p.odometerKm, p.createdAt, if (p.isSignalOnly) null else p.shopName)
+                    // 신호 질문의 shopName은 "차량 신호" → 이력에서 정비소 자리에 출처로 남는다
+                    graph.repo.addRecords(items, p.odometerKm, p.createdAt, p.shopName)
                     if (p.source == ShopSource.DESTINATION || p.source == ShopSource.MAP_SEARCH) {
                         graph.repo.addPlace(p.shopName, p.at, Place.Kind.MY_SHOP) // 다음부터는 바로 알아본다
                     }

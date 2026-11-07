@@ -56,7 +56,7 @@ fun HistoryScreen(graph: AppGraph, data: AppData) {
                     Column(Modifier.padding(horizontal = 28.dp, vertical = 22.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(shop ?: "직접 입력", style = MaterialTheme.typography.titleMedium)
+                                Text(shop?.let { if (it == com.zigae.hephaestus.domain.VisitTracker.SIGNAL_SHOP_NAME) "차량 신호로 확인" else it } ?: "직접 입력", style = MaterialTheme.typography.titleMedium)
                                 Text(date, style = MaterialTheme.typography.bodyMedium, color = Palette.sub)
                             }
                             Text(Format.km(km), style = MaterialTheme.typography.titleMedium)
