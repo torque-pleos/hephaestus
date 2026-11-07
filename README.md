@@ -50,6 +50,17 @@
   - [엔진오일] [타이어] [브레이크] [기타] [정비 안 받음] — **터치 한두 번으로 끝**.
 - 주행 시작 시 카드 자동 닫힘, 미응답 건은 다음 정차 때 한 번 더 묻기.
 
+### F2-1. 차량 신호 기반 기록 유도 (2026-11-07 추가) ★차량특화
+- Vehicle SDK에는 소모품 교체 주기·잔여 수명이 없고 **레벨 상태**(엔진오일·브레이크액·변속기 오일: `OilLevelState`)와 **경고등**(`Telltales`)만 있다.
+- 켜짐은 보충·누유 신호라 기록을 묻지 않고, **"지금 신경 쓸 항목"에 `차량 경고` 배지**로 올린다.
+- **꺼짐**(LOW → NORMAL, 경고등 ON → OFF)은 누군가 손을 봤다는 증거 → 해당 항목을 **미리 고른 기록 질문**을 띄운다.
+  - 정비소 정차 중이면 출차 질문에 "차량 신호로 확인된 항목"으로 합쳐 한 번만 묻는다. 머문 시간이 짧아도 신호 항목만은 묻는다.
+  - 정비소가 아닌 곳이면 "12V 배터리 경고등이 꺼졌어요 · 교체하셨나요?" 카드. **[보충만 했어요]** 로 기록 없이 닫을 수 있다 (보충을 교체로 적으면 다음 알림이 틀어진다).
+  - 주행 중에 꺼지면 다음 정차(P) 때 묻는다.
+- 흔들림 방지: 레벨 센서는 경사·온도로 LOW/NORMAL을 오가므로, **시동 ON을 한 번 넘겼거나 10분 이상 켜져 있던 신호**만 인정한다 (`SignalTracker`).
+- 매핑: 엔진오일 레벨 → 엔진오일, 브레이크액 레벨 → 브레이크액, 변속기 오일 레벨 → 변속기 오일, `LOW_VOLT_BATTERY` 경고등 → 12V 배터리. TPMS는 공기압 보충이 대부분이라 제외.
+- 실차 범위: 엔진오일 레벨 센서는 일부 차종만, 브레이크액·12V 경고등은 대부분 → Capability API로 시작 때 지원 여부 확인.
+
 ### F3. 주행거리 자동 기록
 - 기록 시 Odometer `getCurrentDistanceDriven()` 값을 자동으로 붙임 → 사용자는 거리 입력 불필요.
 - 날짜·장소(정비소명)도 자동 기록. 금액·메모는 선택(정차 중에만 입력 가능).
@@ -102,7 +113,8 @@
 | --- | --- | --- |
 | Vehicle — Odometer | 총 주행거리 조회·구독 (`getCurrentDistanceDriven`, `registerDistanceDriven`) | `pleos.car.permission.CAR_DRIVE` |
 | Vehicle — Brake / DrivingMode | 정차·주행 상태 판단 | `pleos.car.permission.CAR_DRIVE` |
-| Vehicle — Safety | 엔진오일 레벨 경고 (`getEngineOilLevelState`) | `pleos.car.permission.CAR_SAFETY` |
+| Vehicle — Safety | 엔진오일·브레이크액·변속기 오일 레벨 (`get/register*LevelState`, `check*Capabilities`) | `pleos.car.permission.CAR_SAFETY` |
+| Vehicle — Safety (Telltales) | 경고등 (`getTelltalesInfo`, `registerTelltales`) → 12V 배터리 | `pleos.car.permission.PRIVATE_CAR_SAFETY` (normal) |
 | NaviHelper | 목적지 도착 이벤트·POI, 현재 위치 | `pleos.car.permission.NAVI_ROUTE` |
 | Android 표준 | 기어 P·차속(AAOS Car API), `CarUxRestrictions`, Notification(HUN) | — |
 | 외부 | 장소 검색 API(정비소 판별) | — |
@@ -198,7 +210,11 @@
 | 재부팅 | ✅ `BOOT_COMPLETED` → 서비스 자동 시작 → 내 정비소 판별 |
 | 내 정비소 등록 (설정) | ✅ 이름 제안 시트(주소 기반·내비 목적지·단골 카센터)에서 고르면 등록, 정차 중이던 현재 위치가 즉시 `(내 정비소)`로 재판별 |
 | 주행 중 | ✅ DO 미선언 → 시스템이 "주행 중에는 사용할 수 없습니다"로 가림 ([스크린샷](docs/screenshots/04-blocked-while-driving.png)) |
-| 단위 테스트 | ✅ 23개 (방문 감지 상태 기계, 교체 시기, 정비소 판별, 쿨다운, 저장 형식) |
+| 차량 경고등 켜짐 (Virtual Console `telltales/simulator?type=LowVoltBattery&state=On&color=Red`) | ✅ 홈·소모품에 "12V 배터리 `차량 경고`" 맨 위 ([스크린샷](docs/screenshots/10-home-vehicle-warning.png)); 계기판에도 경고등 표시 |
+| 정비소 정차 중 경고등 꺼짐 | ✅ `signals [BATTERY_12V_WARNING] attached to prompt` → 출차 질문에 "차량 신호로 확인된 항목: 12V 배터리" 미리 선택 ([스크린샷](docs/screenshots/11-home-prompt-with-signal.png)) → 기록 |
+| 정비소 아닌 곳에서 경고등 꺼짐 | ✅ 카드 "12V 배터리 경고등이 꺼졌어요 · 교체하셨나요?" + [보충만 했어요] ([스크린샷](docs/screenshots/12-home-signal-prompt.png)) |
+| 레벨 상태 Capability | ✅ 전기차 에뮬레이터는 엔진오일·브레이크액·변속기 오일 모두 `ERROR_NOT_SUPPORTED_PROPERTY` → 미지원으로 표시, 설정 > 개발용 "차량 신호 흉내"로 데모 |
+| 단위 테스트 | ✅ 34개 (방문 감지 상태 기계, 차량 신호 추적·병합, 교체 시기, 정비소 판별, 쿨다운, 저장 형식) |
 
 ### 데모 순서 (Virtual Console + 앱 설정 > 데모)
 
@@ -207,6 +223,8 @@
 3. 기어 D → P (정차) → 홈 "정비소 감지: 시흥 오토 카센터"
 4. 기어 D (출차) → 홈 카드 "시흥 오토 카센터에서 출발하시네요" → 항목 선택 → 기록
 5. 설정 > 데모 "+5,000km" 두 번 → "타이어 위치 교환 시기가 지났어요" 알림
+6. Virtual Console `PUT /vehicle/telltales/simulator?type=LowVoltBattery&state=On&color=Red` → 홈 "12V 배터리 · 차량 경고"
+7. 시동 OFF→ON (`cmd car_service suspend --simulate …`) 뒤 `state=Off` → "12V 배터리 경고등이 꺼졌어요" 카드 (또는 정비소 정차 중이면 출차 질문에 미리 선택). 에뮬레이터가 지원하지 않는 오일 레벨은 설정 > 개발용 "차량 신호 흉내" 칩으로 켜고 끈다.
 
 ### 검증하지 못한 항목
 
@@ -217,6 +235,7 @@
 | 실차 주행거리 값·단위 | 에뮬레이터는 항상 0.0 | 실차에서 `getCurrentDistanceDriven` 로그 |
 | 내연기관 차종 추정 | 에뮬레이터가 전기차(IONIQ 5)뿐 | 내연기관 실차에서 `getFuelPercent` 동작 확인 |
 | 실제 시동 OFF 시 프로세스 유지 | 에뮬레이터는 Suspend 시뮬레이션만 가능 | 실차 |
+| 오일·브레이크액 레벨 신호 | 전기차 에뮬레이터는 property 미지원 (Virtual Console에도 레벨 항목 없음) | 내연기관 실차에서 `checkEngineOilLevelStateCapabilities`·`getBrakeFluidLevelState` 로그 |
 
 ## 10. 디자인 · 사용성
 
@@ -237,6 +256,7 @@ Pleos 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 myHyundai 앱의 �
 ### 화면
 
 - [홈 · 질문 카드](docs/screenshots/01-home-visit-prompt.png) · [홈 · 급한 항목 없음](docs/screenshots/09-home-all-clear.png)
+- [홈 · 차량 경고](docs/screenshots/10-home-vehicle-warning.png) · [출차 질문 + 차량 신호](docs/screenshots/11-home-prompt-with-signal.png) · [차량 신호 질문](docs/screenshots/12-home-signal-prompt.png)
 - [소모품](docs/screenshots/07-items.png) · [주행거리 고르기](docs/screenshots/06-odometer-picker.png) · [교체 주기 고르기](docs/screenshots/08-interval-picker.png)
 - [정비 이력 · 삭제 확인](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
 

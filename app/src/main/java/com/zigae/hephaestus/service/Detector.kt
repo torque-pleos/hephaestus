@@ -95,8 +95,8 @@ class Detector(
     /** 데모: 차량 신호를 켜거나 끈다. 끌 때는 실제 신호처럼 "정비됨" 판정을 거친다. */
     fun simulateSignal(signal: VehicleSignal, on: Boolean) = onMain {
         if (on) simulated += signal else simulated -= signal
-        if (on) signalTracker.onIgnitionOn() // 데모에서는 바로 '확인된' 신호로 둔다
         handleSignals(vehicle.state.value.signals + simulated)
+        if (on) signalTracker.onIgnitionOn() // 데모에서는 켜자마자 '확인된' 신호로 둔다
     }
 
     private fun handleSignals(signals: Set<VehicleSignal>) {
