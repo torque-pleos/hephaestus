@@ -84,14 +84,19 @@ fun ItemsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
             AlertBanner(it, Palette.success, Icons.Filled.CheckCircle)
             Spacer(Modifier.height(16.dp))
         }
+        // 차량이 지금 경고하는 항목은 교체 단계와 상관없이 맨 위 묶음으로
+        val grouped = listOf<Triple<String, String, List<DueStatus>>>(
+            Triple("warning", "차량 경고 · 차량이 부족·이상을 알리고 있어요", due.filter { it.warning }),
+        ) + sections.map { (level, title) -> Triple(level.name, title, due.filter { it.level == level && !it.warning }) }
         LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            sections.forEach { (level, title) ->
-                val rows = due.filter { it.level == level }
+            grouped.forEach { (key, title, rows) ->
                 if (rows.isEmpty()) return@forEach
-                item(key = level.name) {
+                val level = DueLevel.entries.firstOrNull { it.name == key }
+                item(key = key) {
                     Panel(padding = 0.dp) {
                         Row(Modifier.padding(horizontal = 28.dp, vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
-                            levelTone(level)?.let { StatusBadge("${rows.size}", it, strong = level == DueLevel.OVERDUE); Spacer(Modifier.width(12.dp)) }
+                            val tone = if (level == null) Palette.danger else levelTone(level)
+                            tone?.let { StatusBadge("${rows.size}", it, strong = level == null || level == DueLevel.OVERDUE); Spacer(Modifier.width(12.dp)) }
                             Text(title, style = MaterialTheme.typography.titleMedium, color = if (level == DueLevel.NO_RECORD) Palette.sub else Palette.text)
                         }
                         HorizontalDivider(color = Palette.outline)

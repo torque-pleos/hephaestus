@@ -213,6 +213,9 @@
 | 차량 경고등 켜짐 (Virtual Console `telltales/simulator?type=LowVoltBattery&state=On&color=Red`) | ✅ 홈·소모품에 "12V 배터리 `차량 경고`" 맨 위 ([스크린샷](docs/screenshots/10-home-vehicle-warning.png)); 계기판에도 경고등 표시 |
 | 정비소 정차 중 경고등 꺼짐 | ✅ `signals [BATTERY_12V_WARNING] attached to prompt` → 출차 질문에 "차량 신호로 확인된 항목: 12V 배터리" 미리 선택 ([스크린샷](docs/screenshots/11-home-prompt-with-signal.png)) → 기록 |
 | 정비소 아닌 곳에서 경고등 꺼짐 | ✅ 카드 "12V 배터리 경고등이 꺼졌어요 · 교체하셨나요?" + [보충만 했어요] ([스크린샷](docs/screenshots/12-home-signal-prompt.png)) |
+| 내연기관 모드 · 브레이크액 흉내 켬 | ✅ 소모품 탭 맨 위 "차량 경고" 묶음에 브레이크액 ([스크린샷](docs/screenshots/13-items-vehicle-warning.png)) |
+| 브레이크액 흉내 끔 (12V 질문이 남아 있을 때) | ✅ 기다리던 질문에 합쳐져 "12V 배터리 경고등이 꺼졌어요 · 브레이크액 레벨이 정상으로 돌아왔어요", 두 항목 미리 선택 → "2개 기록하기" ([스크린샷](docs/screenshots/14-home-merged-signal-prompt.png)) |
+| 브레이크액 흉내 끔 → [보충만 했어요] | ✅ 기록 없이 카드만 닫힘 |
 | 레벨 상태 Capability | ✅ 전기차 에뮬레이터는 엔진오일·브레이크액·변속기 오일 모두 `ERROR_NOT_SUPPORTED_PROPERTY` → 미지원으로 표시, 설정 > 개발용 "차량 신호 흉내"로 데모 |
 | 단위 테스트 | ✅ 34개 (방문 감지 상태 기계, 차량 신호 추적·병합, 교체 시기, 정비소 판별, 쿨다운, 저장 형식) |
 
@@ -256,6 +259,7 @@ Pleos 기본 UI(밝은 톤)와 같은 앱처럼 보이도록 myHyundai 앱의 �
 ### 화면
 
 - [홈 · 질문 카드](docs/screenshots/01-home-visit-prompt.png) · [홈 · 급한 항목 없음](docs/screenshots/09-home-all-clear.png)
+- [소모품 · 차량 경고 묶음](docs/screenshots/13-items-vehicle-warning.png) · [질문 병합](docs/screenshots/14-home-merged-signal-prompt.png)
 - [홈 · 차량 경고](docs/screenshots/10-home-vehicle-warning.png) · [출차 질문 + 차량 신호](docs/screenshots/11-home-prompt-with-signal.png) · [차량 신호 질문](docs/screenshots/12-home-signal-prompt.png)
 - [소모품](docs/screenshots/07-items.png) · [주행거리 고르기](docs/screenshots/06-odometer-picker.png) · [교체 주기 고르기](docs/screenshots/08-interval-picker.png)
 - [정비 이력 · 삭제 확인](docs/screenshots/02-history.png) · [설정](docs/screenshots/03-settings.png)
