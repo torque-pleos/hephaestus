@@ -31,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zigae.hephaestus.AppGraph
 import com.zigae.hephaestus.data.AppData
 import com.zigae.hephaestus.domain.DueLevel
@@ -51,8 +52,13 @@ fun levelTone(level: DueLevel): Tone? = when (level) {
 }
 
 @Composable
-fun dueStatuses(graph: AppGraph, data: AppData, mode: Powertrain): List<DueStatus> =
-    Reminders.all(mode, { data.interval(it, mode)!! }, data.records, graph.detector.odometerKm(), System.currentTimeMillis())
+fun dueStatuses(graph: AppGraph, data: AppData, mode: Powertrain): List<DueStatus> {
+    val signals by graph.detector.signals.collectAsStateWithLifecycle()
+    return Reminders.all(
+        mode, { data.interval(it, mode)!! }, data.records, graph.detector.odometerKm(), System.currentTimeMillis(),
+        warnings = signals.map { it.item }.toSet(),
+    )
+}
 
 /** 소모품 전체: 단계별 묶음. 항목을 누르면 상세 시트에서 기록·주기 변경. */
 @Composable
@@ -113,7 +119,12 @@ fun DueRow(s: DueStatus, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 22.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(s.item.label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Text(s.item.label, style = MaterialTheme.typography.titleMedium)
+                if (s.warning) {
+                    Spacer(Modifier.width(12.dp))
+                    StatusBadge("차량 경고", Palette.danger, strong = true)
+                }
+                Spacer(Modifier.weight(1f))
                 Text(
                     if (s.level == DueLevel.NO_RECORD) "입력하기" else Format.remaining(s),
                     style = MaterialTheme.typography.titleMedium,

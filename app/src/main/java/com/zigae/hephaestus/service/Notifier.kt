@@ -40,8 +40,8 @@ class Notifier(private val context: Context) {
     fun visit(p: VisitPrompt) {
         val n = Notification.Builder(context, CH_VISIT)
             .setSmallIcon(R.drawable.ic_wrench)
-            .setContentTitle("${p.shopName}에서 출발하시네요")
-            .setContentText("어떤 정비를 받으셨나요? · ${Format.km(p.odometerKm)} 자동 기록")
+            .setContentTitle(if (p.isSignalOnly) p.signals.first().clearedTitle else "${p.shopName}에서 출발하시네요")
+            .setContentText((if (p.isSignalOnly) "교체하셨나요?" else "어떤 정비를 받으셨나요?") + " · ${Format.km(p.odometerKm)} 자동 기록")
             .setCategory(Notification.CATEGORY_REMINDER)
             .setContentIntent(openApp())
             .setAutoCancel(true)

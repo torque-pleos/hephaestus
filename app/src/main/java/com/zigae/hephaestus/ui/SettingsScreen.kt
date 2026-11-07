@@ -31,8 +31,10 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.zigae.hephaestus.AppGraph
 import com.zigae.hephaestus.data.AppData
+import com.zigae.hephaestus.domain.MaintenanceItem
 import com.zigae.hephaestus.domain.Place
 import com.zigae.hephaestus.domain.Powertrain
+import com.zigae.hephaestus.domain.VehicleSignal
 
 /** 설정: 차종 · 내 정비소 · 감지. 교체 주기는 소모품 탭의 항목 시트에서 바꾼다. 개발용 도구는 맨 아래 접어 둔다. */
 @Composable
@@ -40,6 +42,7 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
     val vehicle by graph.vehicle.state.collectAsStateWithLifecycle()
     val navi by graph.navi.state.collectAsStateWithLifecycle()
     val status by graph.detector.status.collectAsStateWithLifecycle()
+    val signals by graph.detector.signals.collectAsStateWithLifecycle()
     var naming by remember { mutableStateOf(false) }
     var showDev by rememberSaveable { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -113,7 +116,18 @@ fun SettingsScreen(graph: AppGraph, data: AppData, mode: Powertrain) {
                     }
                     message?.let { Text(it, color = Palette.info.base, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp)) }
                     Spacer(Modifier.height(24.dp))
+                    SectionTitle("차량 신호 흉내", "켜면 소모품 목록에 차량 경고로 뜨고, 끄면 정비된 것으로 보고 기록을 물어요. 12V 경고등은 Virtual Console로도 켤 수 있어요.")
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        VehicleSignal.entries.filter { it.item in MaintenanceItem.forMode(mode) }.forEach { s ->
+                            val on = s in signals
+                            SelectChip(s.label, on) { graph.detector.simulateSignal(s, !on) }
+                        }
+                    }
+                    Spacer(Modifier.height(24.dp))
                     SectionTitle("진단")
+                    Diag("신호 지원", vehicle.support.entries.joinToString(" · ") { "${it.key}=${if (it.value) "O" else "X"}" }.ifBlank { "-" })
+                    Diag("켜진 경고등", vehicle.warnings.joinToString(", ").ifBlank { "없음" })
+                    Diag("소모품 신호", signals.joinToString(", ") { it.label }.ifBlank { "없음" })
                     Diag("기어", vehicle.gear.name)
                     Diag("차량 주행거리", vehicle.odometerKm?.let { "$it km" } ?: "-")
                     Diag("충전구", vehicle.chargePortOpen?.let { if (it) "열림" else "닫힘" } ?: "-")

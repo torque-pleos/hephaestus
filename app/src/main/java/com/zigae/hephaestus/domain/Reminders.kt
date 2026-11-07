@@ -17,6 +17,8 @@ data class DueStatus(
     val kmLeft: Int?,
     val daysLeft: Int?,
     val level: DueLevel,
+    /** 차량이 지금 부족·경고를 알리고 있는 항목. 교체 주기와 별개로 맨 위에 올린다. */
+    val warning: Boolean = false,
 ) {
     /** 주행거리 기준 진행률(0..1+). 거리 기준이 없으면 기간 기준. */
     val progress: Float?
@@ -70,9 +72,10 @@ object Reminders {
         records: List<MaintenanceRecord>,
         odometerKm: Int,
         nowMillis: Long,
+        warnings: Set<MaintenanceItem> = emptySet(),
     ): List<DueStatus> = MaintenanceItem.forMode(mode)
-        .map { status(it, intervals(it), records, odometerKm, nowMillis) }
-        .sortedWith(compareBy({ order(it.level) }, { urgency(it) }))
+        .map { status(it, intervals(it), records, odometerKm, nowMillis).copy(warning = it in warnings) }
+        .sortedWith(compareBy({ !it.warning }, { order(it.level) }, { urgency(it) }))
 
     private fun order(level: DueLevel) = when (level) {
         DueLevel.OVERDUE -> 0

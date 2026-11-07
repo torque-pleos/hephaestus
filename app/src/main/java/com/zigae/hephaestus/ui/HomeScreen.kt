@@ -57,7 +57,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
     val status by graph.detector.status.collectAsStateWithLifecycle()
     val odo = graph.detector.odometerKm()
     val due = dueStatuses(graph, data, mode)
-    val attention = due.filter { it.level == DueLevel.OVERDUE || it.level == DueLevel.SOON }
+    val attention = due.filter { it.warning || it.level == DueLevel.OVERDUE || it.level == DueLevel.SOON }
     val noRecord = due.count { it.level == DueLevel.NO_RECORD }
     var open by rememberSaveable { mutableStateOf<String?>(null) }
     var saved by remember { mutableStateOf<String?>(null) }
@@ -69,7 +69,7 @@ fun HomeScreen(graph: AppGraph, data: AppData, mode: Powertrain, onOpenItems: ()
             saved?.let { item { AlertBanner(it, Palette.success, Icons.Filled.CheckCircle) } }
             items(data.prompts.sortedByDescending { it.createdAt }, key = { it.id }) { p ->
                 PromptCard(p, mode, due, onSave = { items ->
-                    graph.repo.addRecords(items, p.odometerKm, p.createdAt, p.shopName)
+                    graph.repo.addRecords(items, p.odometerKm, p.createdAt, if (p.isSignalOnly) null else p.shopName)
                     if (p.source == ShopSource.DESTINATION || p.source == ShopSource.MAP_SEARCH) {
                         graph.repo.addPlace(p.shopName, p.at, Place.Kind.MY_SHOP) // 다음부터는 바로 알아본다
                     }
@@ -160,39 +160,55 @@ private fun PromptCard(
     onSkip: () -> Unit,
     onNotShop: () -> Unit,
 ) {
+    // 차량 신호(레벨·경고등 꺼짐)로 정비된 것으로 보이는 항목은 미리 골라 둔다
+    val fromSignals = p.signals.map { it.item }.distinct()
     // 주간/야간 전환 때 화면이 다시 만들어져도 고른 항목을 유지한다
-    var selectedKeys by rememberSaveable(p.id) { mutableStateOf(emptyList<String>()) }
+    var selectedKeys by rememberSaveable(p.id, p.signals.size) { mutableStateOf(fromSignals.map { it.name }) }
     val selected = selectedKeys.mapNotNull(MaintenanceItem::fromKey).toSet()
-    val likely = due.filter { it.level == DueLevel.OVERDUE || it.level == DueLevel.SOON }.map { it.item }
-    val others = MaintenanceItem.forMode(mode).filterNot { it in likely }
+    val likely = due.filter { it.level == DueLevel.OVERDUE || it.level == DueLevel.SOON }.map { it.item }.filterNot { it in fromSignals }
+    val others = MaintenanceItem.forMode(mode).filterNot { it in likely || it in fromSignals }
     fun toggle(item: MaintenanceItem) { selectedKeys = if (item.name in selectedKeys) selectedKeys - item.name else selectedKeys + item.name }
+
+    @Composable
+    fun chips(items: List<MaintenanceItem>) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            items.forEach { item -> SelectChip(item.label, item in selected) { toggle(item) } }
+        }
+    }
 
     HeaderPanel(header = {
         Text("${Format.time(p.createdAt)} · ${Format.km(p.odometerKm)} 자동 기록", style = MaterialTheme.typography.bodyMedium, color = Palette.onHeader.copy(alpha = 0.75f))
         Spacer(Modifier.height(4.dp))
-        Text("${p.shopName}에서 출발하시네요", style = MaterialTheme.typography.titleLarge, color = Palette.onHeader)
+        Text(
+            if (p.isSignalOnly) p.signals.joinToString(" · ") { it.clearedTitle } else "${p.shopName}에서 출발하시네요",
+            style = MaterialTheme.typography.titleLarge, color = Palette.onHeader,
+        )
     }) {
-        Text("어떤 정비를 받으셨나요?", style = MaterialTheme.typography.titleMedium)
+        Text(if (p.isSignalOnly) "교체하셨나요? 보충만 했다면 기록하지 않아요." else "어떤 정비를 받으셨나요?", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(16.dp))
+        if (fromSignals.isNotEmpty()) {
+            Caption("차량 신호로 확인된 항목")
+            Spacer(Modifier.height(8.dp))
+            chips(fromSignals)
+            Spacer(Modifier.height(16.dp))
+        }
         if (likely.isNotEmpty()) {
             Caption("교체 예정이던 항목")
             Spacer(Modifier.height(8.dp))
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                likely.forEach { item -> SelectChip(item.label, item in selected) { toggle(item) } }
-            }
+            chips(likely)
             Spacer(Modifier.height(16.dp))
+        }
+        if (fromSignals.isNotEmpty() || likely.isNotEmpty()) {
             Caption("그 밖의 항목")
             Spacer(Modifier.height(8.dp))
         }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            others.forEach { item -> SelectChip(item.label, item in selected) { toggle(item) } }
-        }
+        chips(others)
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            SecondaryButton("정비 안 받음", Modifier.weight(1f), onSkip)
+            SecondaryButton(if (p.isSignalOnly) "보충만 했어요" else "정비 안 받음", Modifier.weight(1f), onSkip)
             PrimaryButton(if (selected.isEmpty()) "받은 정비를 골라 주세요" else "${selected.size}개 기록하기", Modifier.weight(1.4f), enabled = selected.isNotEmpty()) { onSave(selected) }
         }
-        if (p.source != ShopSource.MY_SHOP && p.source != ShopSource.DEMO) {
+        if (p.source != ShopSource.MY_SHOP && p.source != ShopSource.DEMO && !p.isSignalOnly) {
             TextButton(onClick = onNotShop, modifier = Modifier.padding(top = 8.dp)) {
                 Text("여기는 정비소가 아니에요", style = MaterialTheme.typography.bodyLarge, color = Palette.sub)
             }

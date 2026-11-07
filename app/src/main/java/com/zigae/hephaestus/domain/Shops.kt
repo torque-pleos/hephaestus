@@ -27,6 +27,8 @@ enum class ShopSource(val label: String) {
     DESTINATION("내비 목적지"),
     MAP_SEARCH("지도 검색"),
     DEMO("데모"),
+    /** 정비소 판별 없이 차량 신호(레벨·경고등 꺼짐)만으로 만든 질문. */
+    SIGNAL("차량 신호"),
 }
 
 data class ShopHit(val name: String, val at: LatLon, val source: ShopSource)

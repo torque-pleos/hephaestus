@@ -8,6 +8,7 @@ import com.zigae.hephaestus.domain.MaintenanceRecord
 import com.zigae.hephaestus.domain.Place
 import com.zigae.hephaestus.domain.Powertrain
 import com.zigae.hephaestus.domain.ShopSource
+import com.zigae.hephaestus.domain.VehicleSignal
 import com.zigae.hephaestus.domain.VisitPrompt
 import org.json.JSONArray
 import org.json.JSONObject
@@ -63,11 +64,13 @@ object AppDataCodec {
 
     private fun promptJson(it: VisitPrompt) = JSONObject().put("id", it.id).put("shop", it.shopName).put("lat", it.at.lat).put("lon", it.at.lon)
         .put("source", it.source.name).put("arrivedAt", it.arrivedAt).put("createdAt", it.createdAt).put("km", it.odometerKm)
+        .put("signals", JSONArray(it.signals.map { s -> s.name }))
 
     private fun promptOf(it: JSONObject) = VisitPrompt(
         it.getString("id"), it.getString("shop"), LatLon(it.getDouble("lat"), it.getDouble("lon")),
         it.getString("source").toEnum<ShopSource>() ?: ShopSource.DEMO,
         it.getLong("arrivedAt"), it.getLong("createdAt"), it.getInt("km"),
+        it.optJSONArray("signals")?.let { a -> (0 until a.length()).mapNotNull { i -> VehicleSignal.fromKey(a.getString(i)) } } ?: emptyList(),
     )
 
     fun decode(text: String): AppData {

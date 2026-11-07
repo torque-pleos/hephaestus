@@ -8,6 +8,7 @@ import com.zigae.hephaestus.domain.MaintenanceRecord
 import com.zigae.hephaestus.domain.Place
 import com.zigae.hephaestus.domain.Powertrain
 import com.zigae.hephaestus.domain.ShopSource
+import com.zigae.hephaestus.domain.VehicleSignal
 import com.zigae.hephaestus.domain.VisitPrompt
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,7 +23,7 @@ class AppDataCodecTest {
             intervalOverrides = mapOf(MaintenanceItem.TIRE to Interval(35_000, 36)),
             records = listOf(MaintenanceRecord("r1", MaintenanceItem.TIRE, 52_340, 1_793_500_000_000, "시흥 카센터")),
             places = listOf(Place("p1", "단골 카센터", at, Place.Kind.MY_SHOP)),
-            prompts = listOf(VisitPrompt("v1", "시흥 카센터", at, ShopSource.DESTINATION, 1L, 2L, 52_340)),
+            prompts = listOf(VisitPrompt("v1", "시흥 카센터", at, ShopSource.DESTINATION, 1L, 2L, 52_340, listOf(VehicleSignal.BRAKE_FLUID_LOW))),
             notified = mapOf(MaintenanceItem.BRAKE_FLUID to DueLevel.SOON),
             minDwellMinutes = 0,
             demoOdometerOffsetKm = 52_000,

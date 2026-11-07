@@ -5,11 +5,14 @@ import com.zigae.hephaestus.data.Repository
 import com.zigae.hephaestus.domain.DueLevel
 import com.zigae.hephaestus.domain.Gear
 import com.zigae.hephaestus.domain.LatLon
+import com.zigae.hephaestus.domain.MaintenanceItem
 import com.zigae.hephaestus.domain.PromptCooldown
 import com.zigae.hephaestus.domain.Reminders
 import com.zigae.hephaestus.domain.ShopHit
 import com.zigae.hephaestus.domain.ShopRules
 import com.zigae.hephaestus.domain.ShopSource
+import com.zigae.hephaestus.domain.SignalTracker
+import com.zigae.hephaestus.domain.VehicleSignal
 import com.zigae.hephaestus.domain.VisitPrompt
 import com.zigae.hephaestus.domain.VisitTracker
 import com.zigae.hephaestus.navi.NaviMonitor
@@ -48,12 +51,18 @@ class Detector(
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     private val tracker = VisitTracker()
+    private val signalTracker = SignalTracker()
+    /** 주행 중에 꺼진 신호는 다음 정차 때 묻는다. */
+    private val pendingSignals = mutableListOf<VehicleSignal>()
+    /** 데모용으로 켠 신호(에뮬레이터는 오일 레벨을 지원하지 않는다). 차량 신호와 합쳐진다. */
+    private val simulated = mutableSetOf<VehicleSignal>()
     private val _status = MutableStateFlow(DetectionStatus())
     val status: StateFlow<DetectionStatus> = _status.asStateFlow()
 
     fun start() {
         vehicle.onGear = { g -> onMain { handleGear(g) } }
         vehicle.onChargePort = { open -> onMain { tracker.onChargePortOpen(open) } }
+        vehicle.onSignals = { s -> onMain { handleSignals(s + simulated) } }
         navi.onLocation = { at -> onMain { tracker.onLocation(at)?.let { resolve(it) } } }
         navi.onArrived = { name -> Log.i(TAG, "navi arrived at $name") }
         scope.launch {
@@ -72,10 +81,37 @@ class Detector(
 
     fun onScreenOn() = onMain {
         syncDwell()
+        signalTracker.onIgnitionOn()
         val out = tracker.onScreenOn(now(), odometerKm())
         Log.i(TAG, "ignition on (screen on): parked=${tracker.session != null} shop=${tracker.session?.shop?.name} prompt=${out.prompt != null}")
         out.prompt?.let(::emit)
         if (vehicle.state.value.gear == Gear.PARK) checkReminders()
+    }
+
+    private val _signals = MutableStateFlow<Set<VehicleSignal>>(emptySet())
+    /** 지금 켜져 있는 소모품 신호(차량 + 데모). 소모품 목록에서 차량 경고로 보여준다. */
+    val signals: StateFlow<Set<VehicleSignal>> = _signals.asStateFlow()
+
+    /** 데모: 차량 신호를 켜거나 끈다. 끌 때는 실제 신호처럼 "정비됨" 판정을 거친다. */
+    fun simulateSignal(signal: VehicleSignal, on: Boolean) = onMain {
+        if (on) simulated += signal else simulated -= signal
+        if (on) signalTracker.onIgnitionOn() // 데모에서는 바로 '확인된' 신호로 둔다
+        handleSignals(vehicle.state.value.signals + simulated)
+    }
+
+    private fun handleSignals(signals: Set<VehicleSignal>) {
+        val mode = repo.data.value.mode
+        val relevant = signals.filter { mode == null || it.item in MaintenanceItem.forMode(mode) }.toSet()
+        val cleared = signalTracker.onSignals(now(), relevant)
+        _signals.value = signalTracker.current
+        if (cleared.isNotEmpty()) Log.i(TAG, "signals cleared: $cleared (parked=${tracker.session != null})")
+        if (vehicle.state.value.gear != Gear.PARK) {
+            pendingSignals += cleared
+            return
+        }
+        val toAsk = (pendingSignals + cleared).distinct()
+        pendingSignals.clear()
+        tracker.onSignalsCleared(toAsk, now(), odometerKm(), navi.state.value.location)?.let(::emit)
     }
 
     /** 데모: 지금 위치를 정비소로 보고 바로 질문을 만든다. */
@@ -108,7 +144,10 @@ class Detector(
             resolve(it)
         }
         out.prompt?.let(::emit)
-        if (g == Gear.PARK) checkReminders() else if (tracker.session == null) _status.value = DetectionStatus()
+        if (g == Gear.PARK) {
+            checkReminders()
+            if (pendingSignals.isNotEmpty()) handleSignals(signalTracker.current) // 주행 중 꺼진 신호를 지금 묻는다
+        } else if (tracker.session == null) _status.value = DetectionStatus()
     }
 
     private fun resolve(s: VisitTracker.Session) {
@@ -134,9 +173,20 @@ class Detector(
             Log.i(TAG, "prompt skipped (asked here recently): ${p.shopName}")
             return
         }
-        Log.i(TAG, "prompt: ${p.shopName} at ${p.odometerKm}km (${p.source})")
-        repo.addPrompt(p)
-        notifier.visit(p)
+        val pending = repo.data.value.prompts
+        // 질문은 한 번에 하나만: 신호 질문은 기다리는 정비소 질문에 붙이고, 정비소 질문은 기다리는 신호 질문을 흡수한다.
+        val host = if (p.isSignalOnly) pending.firstOrNull() else null
+        if (host != null) {
+            repo.update { d -> d.copy(prompts = d.prompts.map { if (it.id == host.id) it.copy(signals = (it.signals + p.signals).distinct()) else it }) }
+            Log.i(TAG, "signals ${p.signals} attached to prompt: ${host.shopName}")
+            return
+        }
+        val absorbed = pending.filter { it.isSignalOnly }
+        absorbed.forEach { notifier.cancelVisit(it.id) }
+        val merged = p.copy(signals = (p.signals + absorbed.flatMap { it.signals }).distinct())
+        Log.i(TAG, "prompt: ${merged.shopName} at ${merged.odometerKm}km (${merged.source}) signals=${merged.signals}")
+        repo.addPrompt(merged)
+        notifier.visit(merged)
     }
 
     private fun syncDwell() {

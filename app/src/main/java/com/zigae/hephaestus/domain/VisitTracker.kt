@@ -9,7 +9,11 @@ data class VisitPrompt(
     val arrivedAt: Long,
     val createdAt: Long,
     val odometerKm: Int,
-)
+    /** 차량 신호가 꺼져서 정비된 것으로 보이는 항목(미리 고른 상태로 보여준다). */
+    val signals: List<VehicleSignal> = emptyList(),
+) {
+    val isSignalOnly: Boolean get() = source == ShopSource.SIGNAL
+}
 
 enum class Gear { PARK, REVERSE, NEUTRAL, DRIVE, UNKNOWN }
 
@@ -33,6 +37,8 @@ class VisitTracker(
         val resolved: Boolean = false,
         val charging: Boolean = false,
         val prompted: Boolean = false,
+        /** 정차 중에 꺼진 차량 신호. 출차 질문에 미리 고른 항목으로 들어간다. */
+        val signals: List<VehicleSignal> = emptyList(),
     )
 
     var session: Session? = null
@@ -58,7 +64,21 @@ class VisitTracker(
         val s = session
         session = null
         if (previous != Gear.PARK || s == null) return Outcome()
-        return Outcome(prompt = promptFor(s, now, odometerKm))
+        return Outcome(prompt = promptFor(s, now, odometerKm) ?: signalPromptFor(s, now, odometerKm))
+    }
+
+    /**
+     * 차량 신호가 꺼졌다(정비된 것으로 보인다). 정비소에 정차 중이면 그 세션에 붙여 출차 때 한 번에 묻고,
+     * 아니면 바로 물을 질문을 돌려준다(정차 중이 아닐 때는 호출자가 다음 정차까지 미룬다).
+     */
+    fun onSignalsCleared(signals: List<VehicleSignal>, now: Long, odometerKm: Int, at: LatLon?): VisitPrompt? {
+        if (signals.isEmpty()) return null
+        val s = session
+        if (s != null && s.shop != null && !s.prompted) {
+            session = s.copy(signals = (s.signals + signals).distinct())
+            return null
+        }
+        return VisitPrompt(newId(), SIGNAL_SHOP_NAME, at ?: location ?: LatLon(0.0, 0.0), ShopSource.SIGNAL, now, now, odometerKm, signals.distinct())
     }
 
     /** 위치 갱신. 위치 없이 시작한 세션이 이제 위치를 얻었으면 그 세션을 돌려준다(판별 시작 신호). */
@@ -84,8 +104,16 @@ class VisitTracker(
     /** 시동 ON에 해당하는 화면 켜짐. 아직 정차 중이면 그 자리에서 묻는다. */
     fun onScreenOn(now: Long, odometerKm: Int): Outcome {
         val s = session ?: return Outcome()
-        val prompt = promptFor(s, now, odometerKm) ?: return Outcome()
+        val prompt = promptFor(s, now, odometerKm) ?: signalPromptFor(s, now, odometerKm) ?: return Outcome()
         return Outcome(prompt = prompt)
+    }
+
+    /** 정비소 질문 조건(머문 시간 등)에 못 미쳐도, 꺼진 차량 신호가 있으면 그 항목만이라도 묻는다. */
+    private fun signalPromptFor(s: Session, now: Long, odometerKm: Int): VisitPrompt? {
+        if (s.prompted || s.signals.isEmpty()) return null
+        if (session?.id == s.id) session = s.copy(prompted = true)
+        val at = s.shop?.at ?: s.at ?: location ?: LatLon(0.0, 0.0)
+        return VisitPrompt(newId(), s.shop?.name ?: SIGNAL_SHOP_NAME, at, s.shop?.source ?: ShopSource.SIGNAL, s.since, now, odometerKm, s.signals)
     }
 
     private fun promptFor(s: Session, now: Long, odometerKm: Int): VisitPrompt? {
@@ -94,13 +122,14 @@ class VisitTracker(
         if (now - s.since < minDwellMs) return null
         if (s.charging && shop.source != ShopSource.MY_SHOP) return null
         if (session?.id == s.id) session = s.copy(prompted = true)
-        return VisitPrompt(newId(), shop.name, shop.at, shop.source, s.since, now, odometerKm)
+        return VisitPrompt(newId(), shop.name, shop.at, shop.source, s.since, now, odometerKm, s.signals)
     }
 
     data class Outcome(val started: Session? = null, val prompt: VisitPrompt? = null)
 
     companion object {
         const val DEFAULT_MIN_DWELL_MS = 20L * 60 * 1000
+        const val SIGNAL_SHOP_NAME = "차량 신호"
     }
 }
 
@@ -110,7 +139,7 @@ object PromptCooldown {
     const val RADIUS_M = 300.0
 
     fun blocks(next: VisitPrompt, last: VisitPrompt?): Boolean {
-        if (last == null || next.source == ShopSource.DEMO) return false
+        if (last == null || next.source == ShopSource.DEMO || next.source == ShopSource.SIGNAL) return false
         return next.createdAt - last.createdAt in 0 until WINDOW_MS && next.at.distanceTo(last.at) <= RADIUS_M
     }
 }
