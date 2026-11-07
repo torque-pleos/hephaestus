@@ -14,8 +14,8 @@ android {
         applicationId = "com.zigae.hephaestus"
         minSdk = 28
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "1.0.0"
 
         // 비밀값은 hephaestus/secrets.properties (커밋 금지)에서 읽는다
         val secrets = Properties().apply {
@@ -28,6 +28,9 @@ android {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // 공모전 제출용: 설치 가능한 release 빌드면 되므로 Android SDK 기본 디버그 키(~/.android/debug.keystore)로 서명한다.
+            // 별도 키스토어는 만들지 않는다(만들더라도 커밋 금지 — .gitignore *.keystore/*.jks).
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

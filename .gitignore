@@ -1,5 +1,6 @@
 # Android / Gradle
 .gradle/
+.kotlin/
 build/
 local.properties
 *.iml
@@ -8,6 +9,7 @@ captures/
 .externalNativeBuild/
 .cxx/
 *.apk
+!apk/*.apk
 *.aab
 *.keystore
 *.jks
