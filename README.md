@@ -6,7 +6,7 @@
 
 **Hephaestus(헤파이스토스)** — 정비소에서 출차할 때 "어떤 정비 받으셨나요?"라고 먼저 묻고 **그 시점 주행거리를 자동으로 붙여** 기록한 뒤, 주행거리 기준으로 다음 교체 시기를 알려주는 Pleos Connect 차계부 앱 (내연기관·전기차 모드).
 
-- 시연 영상: [docs/demo/hephaestus_demo.mp4](docs/demo/hephaestus_demo.mp4) (2분 4초, 1920×1080) · 대본: [docs/demo/video-script.md](docs/demo/video-script.md)
+- 시연 영상: [docs/demo/hephaestus_demo.mp4](docs/demo/hephaestus_demo.mp4) (2분 2초, 1920×1080) · 대본: [docs/demo/video-script.md](docs/demo/video-script.md)
 - 화면: [docs/screenshots/](docs/screenshots/)
 
 ### ② 실행 방법
