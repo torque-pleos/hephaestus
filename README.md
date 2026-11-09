@@ -13,7 +13,7 @@
 
 ```bash
 # 1) Pleos Connect 에뮬레이터를 켠다 (아래 ③ 참고). adb 시리얼은 환경에 맞게 바꾼다.
-adb -s emulator-5554 install -r -g apk/정건우_Hephaestus_release.apk
+adb -s emulator-5554 install -r -g apk/양승희_Hephaestus_release.apk
 adb -s emulator-5554 shell am start -n com.zigae.hephaestus/.MainActivity
 ```
 
@@ -64,7 +64,7 @@ adb -s emulator-5554 shell cmd car_service suspend --simulate --skip-garagemode 
 
 ### ④ APK 위치
 
-[`apk/정건우_Hephaestus_release.apk`](apk/정건우_Hephaestus_release.apk) — release 빌드, versionName 1.0.0
+[`apk/양승희_Hephaestus_release.apk`](apk/양승희_Hephaestus_release.apk) — release 빌드, versionName 1.0.0
 
 ---
 
